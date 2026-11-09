@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Duelo</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PC = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A'], WIN = 5;
+let ctx, n, pts, timers = [], armed, kind, done, zones, center;
+const later = (f, ms) => timers.push(setTimeout(f, ms));
+const stop = () => { timers.forEach(clearTimeout); timers = []; };
+
+function start(c) {
+  stop(); ctx = c; n = +c.mode[0]; pts = Array(n).fill(0); done = false;
+  c.stage.style.padding = '0';
+  const layout = n === 2 ? 'grid-template-rows:1fr 1fr' : 'grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr';
+  c.stage.innerHTML = `<div id="ar" style="position:absolute;inset:0;display:grid;${layout};gap:4px;padding:4px;touch-action:none"></div>
+    <div id="ce" style="position:absolute;left:50%;top:50%;width:132px;height:132px;margin:-66px 0 0 -66px;border-radius:50%;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25);display:grid;place-items:center;font-size:58px;z-index:3;pointer-events:none;transition:background .1s"></div>`;
+  const ar = c.stage.querySelector('#ar'); center = c.stage.querySelector('#ce'); zones = [];
+  for (let i = 0; i < (n === 3 ? 4 : n); i++) {
+    const rot = n === 2 ? (i === 0 ? 180 : 0) : (i < 2 ? 180 : 0), on = i < n;
+    const z = Kit.h(`<div style="border-radius:20px;background:${on ? PC[i] : '#D8DCEC'};display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:22px;transform:rotate(${rot}deg);opacity:${on ? 1 : .4}"><div style="text-align:center"><div class="sc" style="font-size:44px">0</div><div>J${i + 1}</div></div></div>`);
+    if (on) z.addEventListener('pointerdown', e => { e.preventDefault(); hit(i, z); });
+    ar.appendChild(z); zones.push(z); }
+  c.tools([]); c.info(`Primero a ${WIN}`); round();
+}
+function round() {
+  if (done) return; armed = false; kind = ['verde', 'estrella', 'iguales'][Math.floor(Math.random() * 3)];
+  center.style.background = '#fff';
+  const intro = { verde: ['🔴', 'Toca cuando sea verde'], estrella: ['👀', 'Toca solo con la ⭐'], iguales: ['👀', 'Toca si son iguales'] }[kind];
+  center.innerHTML = `<div style="text-align:center;line-height:1">${intro[0]}<div style="font-size:12px;font-weight:900;color:#1D2340;font-family:var(--body);margin-top:6px;padding:0 8px">${intro[1]}</div></div>`;
+  const wait = 1400 + Math.random() * 2600;
+  if (kind === 'verde') later(() => { center.style.background = '#2DB57A'; center.innerHTML = '🟢'; armed = true; Kit.tone(880, .1); }, wait);
+  if (kind === 'estrella') { const decoys = ['🌙', '☀️', '⚡', '🌸', '🍀', '❄️']; let t = 900;
+    for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++) { later(() => { center.innerHTML = decoys[Math.floor(Math.random() * decoys.length)]; Kit.tone(400, .05, 'triangle'); }, t); t += 700 + Math.random() * 500; }
+    later(() => { center.innerHTML = '⭐'; armed = true; Kit.tone(990, .1); }, t); }
+  if (kind === 'iguales') { const S = ['🍎', '🍌', '🍇', '🍓', '🍋']; let t = 900, k = 0;
+    const show = () => { const same = k > 1 && Math.random() < .4, a = S[Math.floor(Math.random() * 5)]; let b = a; if (!same) do b = S[Math.floor(Math.random() * 5)]; while (b === a);
+      center.innerHTML = `<span style="font-size:40px">${a}${b}</span>`; armed = a === b; Kit.tone(armed ? 990 : 420, .06, 'triangle'); k++; if (!armed) later(show, 750 + Math.random() * 400); };
+    later(show, t); }
+}
+function hit(i, z) {
+  if (done) return;
+  if (!armed) { pts[i] = Math.max(0, pts[i] - 1); z.animate([{ filter: 'brightness(.5)' }, { filter: 'none' }], { duration: 300 }); Kit.buzz(80); Kit.tone(150, .12, 'sawtooth'); upd(); return; }
+  armed = false; stop(); pts[i]++; upd(); Kit.tone(660, .1); Kit.buzz(30);
+  center.style.background = PC[i]; center.innerHTML = '🏆';
+  if (pts[i] >= WIN) { done = true; Kit.confetti(); return later(() => ctx.result(`¡Gana J${i + 1}!`, pts.map((p, j) => `J${j + 1}: ${p}`).join(' · ')), 700); }
+  later(round, 1300);
+}
+function upd() { zones.forEach((z, i) => { const s = z.querySelector('.sc'); if (s && i < n) s.textContent = pts[i]; }); }
+
+Kit.game({ tutorial: [["⚡","Cada uno en su color","De 2 a 4 personas en el mismo móvil. Cada una pone el dedo en su zona.","🟥 🟦 🟨 🟩"],["🟢","Espera la señal","Toca solo cuando salga el verde, la estrella o dos frutas iguales.",null],["🏆","Primero a 5","Si tocas antes de tiempo, pierdes un punto.",null]], mood: 'alegre', id: 'duelo', name: 'Duelo', noLevels: true, map: 'nubes', color: 'linear-gradient(135deg,#FDBA74,#E5484D)',
+  tagline: 'De 2 a 4 personas en el mismo móvil. Cada una toca su color. ¡Si tocas antes de tiempo, pierdes un punto!',
+  modes: [{ id: '2p', name: '2 jugadores' }, { id: '3p', name: '3' }, { id: '4p', name: '4' }],
+  art: '<svg viewBox="0 0 70 70"><circle cx="20" cy="20" r="10" fill="#fff"/><circle cx="50" cy="20" r="10" fill="#3E7BFA"/><circle cx="20" cy="50" r="10" fill="#F5B82E"/><circle cx="50" cy="50" r="10" fill="#2DB57A"/></svg>',
+  homeExtra: () => `<div style="padding:20px 18px;display:flex;flex-direction:column;gap:10px">${[['🟢', 'Verde', 'Espera al verde y toca el primero.'], ['⭐', 'Estrella', 'Solo vale tocar cuando sale la estrella.'], ['🍎🍎', 'Iguales', 'Toca cuando las dos frutas coincidan.'], ['🏆', 'Gana', `El primero en llegar a ${WIN} puntos.`]].map(([e, t, d]) => `<div style="background:rgba(255,255,255,.9);border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:center"><span style="font-size:28px">${e}</span><div><b>${t}</b><div style="font-size:13px;color:var(--muted);font-weight:700">${d}</div></div></div>`).join('')}</div>`,
+  stop, start });
+})();
+</script></body></html>

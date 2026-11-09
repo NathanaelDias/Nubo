@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Puntos y cajas</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PC = ['#3E7BFA', '#E5484D', '#2DB57A', '#F5B82E'], CPU = '🤖';
+let ctx, R, C, H, V, owner, players, turn, score, busy, cpu, skill;
+const ICONS = { clasico: ['🔵', '🔴', '🟢', '🟡'], animales: ['🐱', '🐶', '🐸', '🐥'], espacio: ['🚀', '👽', '🪐', '⭐'] };
+
+function sides(r, c) { return (H[r][c] ? 1 : 0) + (H[r + 1][c] ? 1 : 0) + (V[r][c] ? 1 : 0) + (V[r][c + 1] ? 1 : 0); }
+function moves() { const m = []; for (let r = 0; r <= R; r++) for (let c = 0; c < C; c++) if (!H[r][c]) m.push(['h', r, c]); for (let r = 0; r < R; r++) for (let c = 0; c <= C; c++) if (!V[r][c]) m.push(['v', r, c]); return m; }
+function boxesOf([t, r, c]) { return t === 'h' ? [[r - 1, c], [r, c]].filter(([a]) => a >= 0 && a < R) : [[r, c - 1], [r, c]].filter(([, b]) => b >= 0 && b < C); }
+function start(c) {
+  ctx = c; cpu = c.mode === 'cpu'; players = cpu ? 2 : +c.mode[0]; skill = Math.min(1, .3 + c.diff * .05);
+  R = cpu ? Math.min(3 + Math.floor(c.diff / 6), 6) : 5; C = R; H = Array.from({ length: R + 1 }, () => Array(C).fill(0)); V = Array.from({ length: R }, () => Array(C + 1).fill(0));
+  owner = Array.from({ length: R }, () => Array(C).fill(-1)); turn = 0; score = Array(players).fill(0); busy = false;
+  c.stage.style.flexDirection = 'column'; c.stage.style.gap = '12px';
+  c.stage.innerHTML = `<div id="sc" style="display:flex;gap:6px;justify-content:center"></div><div id="bd" style="position:relative;touch-action:none"></div>`;
+  c.tools([]); draw();
+}
+function draw() {
+  const I = ICONS[Kit.theme()] || ICONS.clasico, S = Math.min((Math.min(ctx.stage.clientWidth, 400) - 30) / C, (ctx.stage.clientHeight - 90) / R), P = 15, bd = ctx.stage.querySelector('#bd');
+  bd.style.width = (C * S + 2 * P) + 'px'; bd.style.height = (R * S + 2 * P) + 'px';
+  let h = '';
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) if (owner[r][c] >= 0) h += `<div style="position:absolute;left:${P + c * S + 4}px;top:${P + r * S + 4}px;width:${S - 8}px;height:${S - 8}px;border-radius:10px;background:${PC[owner[r][c]]}33;display:grid;place-items:center;font-size:${S * .45}px;animation:kpop .3s">${cpu && owner[r][c] === 1 ? CPU : I[owner[r][c]]}</div>`;
+  for (let r = 0; r <= R; r++) for (let c = 0; c < C; c++) h += `<button data-m="h,${r},${c}" style="position:absolute;left:${P + c * S + 6}px;top:${P + r * S - 9}px;width:${S - 12}px;height:18px;display:grid;align-items:center"><i style="display:block;height:6px;border-radius:3px;background:${H[r][c] ? PC[H[r][c] - 1] : 'rgba(29,35,64,.08)'}"></i></button>`;
+  for (let r = 0; r < R; r++) for (let c = 0; c <= C; c++) h += `<button data-m="v,${r},${c}" style="position:absolute;left:${P + c * S - 9}px;top:${P + r * S + 6}px;width:18px;height:${S - 12}px;display:grid;justify-items:center"><i style="display:block;width:6px;height:100%;border-radius:3px;background:${V[r][c] ? PC[V[r][c] - 1] : 'rgba(29,35,64,.08)'}"></i></button>`;
+  for (let r = 0; r <= R; r++) for (let c = 0; c <= C; c++) h += `<i style="position:absolute;left:${P + c * S - 6}px;top:${P + r * S - 6}px;width:12px;height:12px;border-radius:50%;background:#1D2340;pointer-events:none"></i>`;
+  bd.innerHTML = h; bd.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (busy || (cpu && turn === 1)) return; const [t, r, c] = b.dataset.m.split(','); play([t, +r, +c]); });
+  ctx.stage.querySelector('#sc').innerHTML = score.map((s, i) => `<div style="padding:6px 12px;border-radius:14px;font-weight:900;color:#fff;background:${PC[i]};opacity:${i === turn ? 1 : .45};transform:scale(${i === turn ? 1.08 : 1});transition:all .2s">${cpu && i === 1 ? CPU : I[i]} ${s}</div>`).join('');
+  ctx.info(cpu ? (turn ? 'Piensa la máquina…' : 'Tu turno') : `Turno J${turn + 1}`);
+}
+function play(m) {
+  const [t, r, c] = m; if ((t === 'h' ? H : V)[r][c]) return; (t === 'h' ? H : V)[r][c] = turn + 1; Kit.tone(420 + turn * 60, .05, 'triangle');
+  let got = 0; boxesOf(m).forEach(([a, b]) => { if (sides(a, b) === 4) { owner[a][b] = turn; got++; } });
+  if (got) { score[turn] += got; Kit.tone(880, .12); } else turn = (turn + 1) % players;
+  draw();
+  if (!moves().length) return end();
+  if (cpu && turn === 1) { busy = true; setTimeout(() => { busy = false; play(cpuMove()); }, 450 + Math.random() * 400); }
+}
+function cpuMove() { const ms = moves(), r = Math.random;
+  const take = ms.filter(m => boxesOf(m).some(([a, b]) => sides(a, b) === 3)); if (take.length && r() < .55 + skill * .45) return take[Math.floor(r() * take.length)];
+  const safe = ms.filter(m => boxesOf(m).every(([a, b]) => sides(a, b) < 2)); if (safe.length && r() < .3 + skill * .7) return safe[Math.floor(r() * safe.length)];
+  if (skill > .6) { let best = null, bc = 1e9; for (const m of ms) { const [t, a, b] = m; (t === 'h' ? H : V)[a][b] = 9; let give = 0; for (let x = 0; x < R; x++) for (let y = 0; y < C; y++) if (owner[x][y] < 0 && sides(x, y) === 3) give++; (t === 'h' ? H : V)[a][b] = 0; if (give < bc) { bc = give; best = m; } } return best; }
+  return ms[Math.floor(r() * ms.length)]; }
+function end() { const best = Math.max(...score);
+  if (cpu) { if (score[0] > score[1]) return ctx.win(score[0] - score[1] >= R ? 3 : score[0] - score[1] >= 2 ? 2 : 1, { text: `Tú ${score[0]} · Máquina ${score[1]}` }); return ctx.lose(score[0] === score[1] ? `Empate ${score[0]}-${score[1]}. ¡Hay que ganar!` : `La máquina gana ${score[1]}-${score[0]}`); }
+  const w = score.map((s, i) => s === best ? 'J' + (i + 1) : null).filter(Boolean); Kit.confetti(); ctx.result(w.length > 1 ? '¡Empate!' : `¡Gana ${w[0]}!`, score.map((s, i) => `J${i + 1}: ${s}`).join(' · ')); }
+
+Kit.game({ id: 'puntos', name: 'Puntos y cajas', map: 'islas', mood: 'alegre', color: 'linear-gradient(135deg,#FDE68A,#F59E0B)', levels: 60,
+  tagline: 'Por turnos, une dos puntos. Quien cierra una caja se la queda y vuelve a jugar.',
+  modes: [{ id: 'cpu', name: 'Contra la máquina' }, { id: '2p', name: '2' }, { id: '3p', name: '3' }, { id: '4p', name: '4' }],
+  tutorial: [['✏️', 'Une dos puntos', 'En tu turno, toca el hueco entre dos puntos para trazar una línea.', '• — •'], ['📦', 'Cierra cajas', 'Si tu línea cierra el cuarto lado de una caja, es tuya y vuelves a jugar.', null], ['🧠', 'No regales cajas', 'Evita poner el tercer lado: el siguiente jugador se llevaría la caja.', null]],
+  art: '<svg viewBox="0 0 70 70">' + [0, 1, 2].map(y => [0, 1, 2].map(x => `<circle cx="${15 + x * 20}" cy="${15 + y * 20}" r="4" fill="#fff"/>`).join('')).join('') + '<path d="M15 15H35V35H15Z" fill="rgba(255,255,255,.35)" stroke="#fff" stroke-width="3"/></svg>',
+  themes: [{ id: 'clasico', name: 'Clásico', pv: '🔵', bg: '#FEF3C7' }, { id: 'animales', name: 'Animales', cost: 100, pv: '🐱', bg: '#FFE4E6' }, { id: 'espacio', name: 'Espacio', cost: 120, pv: '🚀', bg: '#E0E7FF' }],
+  onTheme: () => ctx && draw(), start });
+})();
+</script></body></html>

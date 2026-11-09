@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Busca y encuentra</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const SETS = {
+  desvan: { e: '🔑🧸🎩🕰️📷🎈🧦🪀🎲📚🕯️🧶🪁🎻🧩🪆🖼️👓🧤⌛📻🪑🧳🎨🔔🪃🪞🧵📦🗝️🎺🪕🧭🕹️', bg: 'radial-gradient(circle at 30% 20%,#F6E3C4,#C99A6B)', clut: '🟫🟤🧱📄🪵' },
+  playa: { e: '🐚🦀⛱️🏐🩴🕶️🧴🍦🐠🪣⚓🦩🐙🌴🛟🍉🥥🏄🐬🪸🦞🐢🌞🐡🦑🪼🏖️🥤🍹', bg: 'radial-gradient(circle at 50% 10%,#BFEFFF,#F5D78E 60%)', clut: '🟡🟠⚪🫧💧' },
+  espacio: { e: '🚀🪐⭐🌙☄️👽🛸🌍🌞🔭🛰️👩‍🚀🌠🧑‍🚀🌑🌕💫🧪🔋📡🧲🌌🪨🌟🌘🌖🤖🛞', bg: 'radial-gradient(circle at 70% 20%,#3B4380,#0E1230)', clut: '✦·✧⋆•' } };
+const css = `
+.bs{position:absolute;transform:translate(-50%,-50%) rotate(var(--r));line-height:1;transition:left .6s ease,top .6s ease,opacity .5s}
+.bs>span{display:inline-block}
+.m-pulse>span{animation:bpulse var(--d) ease-in-out infinite}@keyframes bpulse{50%{transform:scale(.45)}}
+.m-grow>span{animation:bgrow var(--d) ease-in-out infinite}@keyframes bgrow{50%{transform:scale(1.6)}}
+.m-blink>span{animation:bblink var(--d) ease-in-out infinite}@keyframes bblink{0%,40%{opacity:1}55%,85%{opacity:0}100%{opacity:1}}
+.m-spin>span{animation:bspin var(--d) linear infinite}@keyframes bspin{to{transform:rotate(360deg)}}
+.m-drift{animation:bdrift var(--d) ease-in-out infinite alternate}@keyframes bdrift{to{translate:var(--dx) var(--dy)}}
+.m-wobble>span{animation:bwob var(--d) ease-in-out infinite}@keyframes bwob{25%{transform:rotate(-25deg)}75%{transform:rotate(25deg)}}
+.clut{position:absolute;pointer-events:none;opacity:.35;transform:translate(-50%,-50%)}
+.found{transform:translate(-50%,-50%) scale(2.2)!important;opacity:0!important;transition:all .4s!important}
+#tg span.ok{animation:tgok .5s}@keyframes tgok{50%{transform:scale(1.4)}}`;
+const MOVES = ['m-pulse', 'm-grow', 'm-blink', 'm-spin', 'm-drift', 'm-wobble'];
+let ctx, items, targets, foundN, t0, timer, mover, sc;
+const seg = s => [...new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(s)].map(x => x.segment);
+
+function start(c) {
+  ctx = c; stop(); const r = c.r, S = SETS[Kit.theme()] || SETS.desvan, pool = Kit.shuffle(seg(S.e), r), lv = c.diff;
+  const nT = Math.min(4 + Math.floor(lv / 5), 7), N = Math.min(60 + lv * 5, 170), moving = Math.min(.25 + lv * .03, .75);
+  targets = pool.slice(0, nT).map(e => ({ e, found: false })); const others = pool.slice(nT);
+  items = targets.map(t => ({ e: t.e, t: true }));
+  while (items.length < N) items.push({ e: others[Math.floor(r() * others.length)], t: false });
+  Kit.shuffle(items, r).forEach(o => { o.x = 3 + r() * 94; o.y = 3 + r() * 94; o.rot = (r() - .5) * 90; o.s = 15 + r() * 17;
+    o.mv = r() < moving ? MOVES[Math.floor(r() * MOVES.length)] : ''; o.d = (1.6 + r() * 2.8).toFixed(2) + 's'; });
+  foundN = 0; t0 = Date.now();
+  c.stage.style.flexDirection = 'column'; c.stage.style.gap = '10px';
+  c.stage.innerHTML = `<style>${css}</style><div id="sc" style="position:relative;width:min(100%,440px);aspect-ratio:3/4;max-height:100%;border-radius:20px;overflow:hidden;background:${S.bg};box-shadow:inset 0 0 0 3px rgba(0,0,0,.08)"></div>
+    <div id="tg" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"></div>`;
+  sc = c.stage.querySelector('#sc');
+  // capa de desorden (no se puede tocar): manchas, papeles, estrellas...
+  const cl = seg(S.clut); let clut = '';
+  for (let i = 0; i < 70 + lv * 2; i++) clut += `<span class="clut" style="left:${r() * 100}%;top:${r() * 100}%;font-size:${10 + r() * 34}px;transform:translate(-50%,-50%) rotate(${r() * 360}deg)">${cl[Math.floor(r() * cl.length)]}</span>`;
+  sc.innerHTML = clut;
+  items.forEach(o => { const b = Kit.h(`<button class="bs ${o.mv}" style="left:${o.x}%;top:${o.y}%;font-size:${o.s}px;--r:${o.rot}deg;--d:${o.d};--dx:${(Math.random() - .5) * 40}px;--dy:${(Math.random() - .5) * 40}px;z-index:${Math.floor(o.s)}"><span>${o.e}</span></button>`);
+    b.onclick = ev => { ev.stopPropagation(); tap(o, b, ev); }; o.el = b; sc.appendChild(b); });
+  sc.onclick = () => penalty();
+  drawT(); c.tools([{ t: '💡 Pista · 20', fn: hint }, { t: '🔍 Congelar 5 s · 30', fn: freeze }]);
+  timer = setInterval(() => { if (!document.body.contains(sc)) return stop(); ctx.info(`⏱ ${Math.floor((Date.now() - t0) / 1000)} s`); }, 500);
+  // algunos objetos desaparecen y reaparecen en otro sitio
+  mover = setInterval(() => { if (!document.body.contains(sc)) return stop();
+    const k = 2 + Math.floor(lv / 6); for (let i = 0; i < k; i++) { const o = items[Math.floor(Math.random() * items.length)]; if (o.done || o.frozen) continue;
+      o.el.style.opacity = 0; setTimeout(() => { o.x = 3 + Math.random() * 94; o.y = 3 + Math.random() * 94; o.el.style.left = o.x + '%'; o.el.style.top = o.y + '%'; o.el.style.opacity = 1; }, 500); } }, Math.max(900, 2600 - lv * 60));
+}
+function stop() { clearInterval(timer); clearInterval(mover); }
+function drawT() { ctx.stage.querySelector('#tg').innerHTML = targets.map(t => `<span class="${t.found ? 'ok' : ''}" style="display:inline-block;font-size:26px;background:#fff;border:2px solid ${t.found ? 'var(--ok)' : 'var(--line)'};border-radius:14px;padding:4px 8px;opacity:${t.found ? .4 : 1}">${t.e}</span>`).join(''); }
+function penalty() { t0 -= 3000; Kit.tone(160, .1, 'square', .04); Kit.buzz(40); Kit.toast('−3 s'); sc.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 180 }); }
+function tap(o, b, ev) {
+  const t = targets.find(x => !x.found && x.e === o.e && o.t);
+  if (!t) return penalty();
+  t.found = true; o.done = true; foundN++; Kit.tone(880, .1); Kit.tone(1320, .12, 'triangle'); Kit.burst(ev.clientX, ev.clientY); b.classList.add('found'); drawT();
+  if (foundN === targets.length) { stop(); const s = (Date.now() - t0) / 1000, par = 10 + targets.length * 7; ctx.win(s < par ? 3 : s < par * 1.7 ? 2 : 1, { text: `Todo encontrado en ${Math.round(s)} s` }); } }
+function hint() { if (Kit.coins() < 20) { Kit.toast('Necesitas 20 monedas'); return; } const t = targets.find(x => !x.found); if (!t) return; Kit.addCoins(-20);
+  const o = items.find(i => i.t && i.e === t.e); o.frozen = true; o.el.style.zIndex = 99; o.el.animate([{ filter: 'drop-shadow(0 0 0 #fff)' }, { filter: 'drop-shadow(0 0 12px #FFE38A) drop-shadow(0 0 12px #FFE38A)' }, { filter: 'drop-shadow(0 0 0 #fff)' }], { duration: 900, iterations: 3 }); }
+function freeze() { if (Kit.coins() < 30) { Kit.toast('Necesitas 30 monedas'); return; } Kit.addCoins(-30); sc.querySelectorAll('.bs,.bs>span').forEach(e => e.style.animationPlayState = 'paused');
+  items.forEach(o => o.frozen = true); Kit.toast('¡Todo quieto 5 s!'); setTimeout(() => { sc.querySelectorAll('.bs,.bs>span').forEach(e => e.style.animationPlayState = 'running'); items.forEach(o => o.frozen = false); }, 5000); }
+
+Kit.game({ tutorial: [["🔍","Encuentra la lista","Abajo tienes los objetos que buscar. Tócalos en la escena.","🔑 🧸 🎈"],["🌀","¡Se mueven!","Hay objetos que crecen, encogen, parpadean y cambian de sitio. Míralos con calma.",null],["⏱","Contra el reloj","Cada toque fallido resta 3 segundos. Usa «Congelar» para pararlo todo 5 segundos.",null]], id: 'busca', name: 'Busca y encuentra', map: 'escalera', mood: 'alegre', color: 'linear-gradient(135deg,#FFC37A,#F07A2B)', levels: 60,
+  tagline: 'Encuentra los objetos de la lista. Se mueven, crecen, se esconden y cambian de sitio. Cada fallo resta 3 s.',
+  art: '<svg viewBox="0 0 70 70"><circle cx="30" cy="30" r="16" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="6"/><path d="M42 42 L58 58" stroke="#fff" stroke-width="9" stroke-linecap="round"/><text x="22" y="37" font-size="16">🔑</text></svg>',
+  themes: [{ id: 'desvan', name: 'Desván', pv: '🧸', bg: '#F6E3C4' }, { id: 'playa', name: 'Playa', cost: 100, pv: '🐚', bg: '#FFF4D6' }, { id: 'espacio', name: 'Espacio', cost: 150, pv: '🪐', bg: '#E2E6FF' }],
+  stop, start });
+})();
+</script></body></html>

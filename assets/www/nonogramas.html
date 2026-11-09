@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Nonogramas</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const INK = { tinta: '#1D2340', mar: '#1F6FB2', bosque: '#2D7A4E' };
+let ctx, N, sol, grid, rows, cols, mode, t0, timer, hints, painting = null;
+const clue = line => { const out = []; let k = 0; line.forEach(v => { if (v) k++; else if (k) { out.push(k); k = 0; } }); if (k) out.push(k); return out.length ? out : [0]; };
+function picture(r, N) { // manchas suavizadas: parecen dibujos y no ruido
+  let g = Array.from({ length: N }, () => Array.from({ length: N }, () => r() < .55 ? 1 : 0));
+  for (let it = 0; it < 2; it++) g = g.map((row, y) => row.map((v, x) => { let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const a = g[y + dy]; if (a && a[x + dx]) n++; } return n >= 5 ? 1 : n <= 3 ? 0 : v; }));
+  for (let y = 0; y < N; y++) { if (!g[y].some(Boolean)) g[y][Math.floor(r() * N)] = 1; }
+  return g; }
+function start(c) {
+  ctx = c; clearInterval(timer); N = c.diff <= 6 ? 5 : c.diff <= 18 ? 7 : c.diff <= 34 ? 8 : 10;
+  sol = picture(c.r, N); rows = sol.map(clue); cols = sol[0].map((_, x) => clue(sol.map(r => r[x])));
+  grid = Array.from({ length: N }, () => Array(N).fill(0)); mode = 1; t0 = Date.now(); hints = 0;
+  const cw = Math.min(Math.floor((Math.min(c.stage.clientWidth, 420) - 20) / (N + 2.4)), 40);
+  c.stage.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div id="g" style="display:grid;grid-template-columns:${cw * 2.4}px repeat(${N},${cw}px);grid-auto-rows:${cw}px;touch-action:none;user-select:none"></div></div>`;
+  c.tools([{ t: '■ Pintar', fn: () => setMode(1) }, { t: '✕ Marcar', fn: () => setMode(2) }, { t: '💡 Pista · 25', fn: hint }]);
+  const g = c.stage.querySelector('#g'); g.style.gridTemplateRows = `${cw * 2.4}px`;
+  g.addEventListener('pointerdown', e => { const b = e.target.closest('[data-y]'); if (!b) return; e.preventDefault(); const y = +b.dataset.y, x = +b.dataset.x; painting = grid[y][x] === mode ? 0 : mode; set(y, x); });
+  g.addEventListener('pointermove', e => { if (painting === null) return; const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest('[data-y]'); if (b) set(+b.dataset.y, +b.dataset.x); });
+  addEventListener('pointerup', () => { if (painting !== null) { painting = null; check(); } });
+  setMode(1); draw(cw);
+  timer = setInterval(() => { if (!document.body.contains(g)) return clearInterval(timer); c.info(`⏱ ${Math.floor((Date.now() - t0) / 1000)} s`); }, 500);
+}
+function setMode(m) { mode = m; const b = ctx.stage.parentElement.querySelectorAll('.k-tools button'); b[0].style.background = m === 1 ? 'var(--accent)' : ''; b[0].style.color = m === 1 ? '#fff' : ''; b[1].style.background = m === 2 ? 'var(--accent)' : ''; b[1].style.color = m === 2 ? '#fff' : ''; }
+function set(y, x) { if (grid[y][x] === painting) return; grid[y][x] = painting; Kit.tone(painting === 1 ? 520 : 360, .03, 'triangle', .05); draw(); }
+function lineOk(line, cl) { return clue(line.map(v => v === 1 ? 1 : 0)).join() === cl.join(); }
+function draw(cw) { const g = ctx.stage.querySelector('#g'); cw = cw || parseInt(g.style.gridAutoRows); const ink = INK[Kit.theme()] || INK.tinta;
+  let h = `<div></div>`;
+  cols.forEach((cl, x) => { const ok = lineOk(grid.map(r => r[x]), cl); h += `<div style="display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-weight:900;font-size:${cw * .38}px;line-height:1.15;color:${ok ? '#B8BED8' : ink};padding-bottom:3px;${x % 5 === 0 && x ? 'border-left:2px solid transparent' : ''}">${cl.join('<br>')}</div>`; });
+  grid.forEach((row, y) => { const ok = lineOk(row, rows[y]);
+    h += `<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;padding-right:5px;font-weight:900;font-size:${cw * .4}px;color:${ok ? '#B8BED8' : ink}">${rows[y].join(' ')}</div>`;
+    row.forEach((v, x) => { h += `<div data-y="${y}" data-x="${x}" style="background:${v === 1 ? ink : '#fff'};border:1px solid #CBD2EC;${x % 5 === 4 && x < N - 1 ? 'border-right:2px solid #626A8C;' : ''}${y % 5 === 4 && y < N - 1 ? 'border-bottom:2px solid #626A8C;' : ''}display:grid;place-items:center;color:#9AA3C9;font-weight:900;transition:background .12s">${v === 2 ? '✕' : ''}</div>`; }); });
+  g.innerHTML = h; }
+function check() { if (grid.every((r, y) => lineOk(r, rows[y])) && cols.every((cl, x) => lineOk(grid.map(r => r[x]), cl))) {
+  clearInterval(timer); const s = (Date.now() - t0) / 1000, par = N * N * 1.4; ctx.win(hints ? 1 : s < par ? 3 : s < par * 2 ? 2 : 1, { text: `Dibujo descubierto en ${Math.round(s)} s` }); } }
+function hint() { if (Kit.coins() < 25) { Kit.toast('Necesitas 25 monedas'); return; } const c = []; sol.forEach((r, y) => r.forEach((v, x) => { if ((v === 1) !== (grid[y][x] === 1)) c.push([y, x]); }));
+  if (!c.length) return; Kit.addCoins(-25); hints++; const [y, x] = c[Math.floor(Math.random() * c.length)]; grid[y][x] = sol[y][x] ? 1 : 2; draw(); check(); }
+
+Kit.game({ tutorial: [["🔢","Los números dicen cuántas","Cada número es un grupo de casillas pintadas seguidas en esa fila o columna.","3 ■■■ 1 ■"],["■","Pinta arrastrando","Toca o arrastra para pintar. Cambia a ✕ para marcar las casillas vacías.",null],["🖼","Descubre el dibujo","Cuando todas las filas y columnas cumplan sus números, aparece el dibujo.",null]], id: 'nonogramas', name: 'Nonogramas', map: 'camino', mood: 'calma', color: 'linear-gradient(135deg,#93C5FD,#3E5BD8)', levels: 60,
+  tagline: 'Los números dicen cuántas casillas seguidas hay que pintar en cada fila y columna. Descubre el dibujo.',
+  art: '<svg viewBox="0 0 70 70">' + [0, 1, 2, 3].map(y => [0, 1, 2, 3].map(x => `<rect x="${12 + x * 12}" y="${12 + y * 12}" width="11" height="11" fill="${(x + y) % 3 ? '#fff' : 'rgba(255,255,255,.3)'}"/>`).join('')).join('') + '</svg>',
+  themes: [{ id: 'tinta', name: 'Tinta', pv: '■', bg: '#EEF1FB' }, { id: 'mar', name: 'Mar', cost: 100, pv: '🌊', bg: '#DBEAFE' }, { id: 'bosque', name: 'Bosque', cost: 100, pv: '🌲', bg: '#DCFCE7' }],
+  onTheme: () => ctx && draw(), stop: () => clearInterval(timer), start });
+})();
+</script></body></html>

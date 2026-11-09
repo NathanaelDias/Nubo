@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Simón</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PADS = { colores: { c: ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7', '#F07A2B', '#FF6FA8', '#22B8CF', '#94A3B8'], e: [] },
+  animales: { c: ['#FFE0E6', '#DCEBFF', '#FFF3CF', '#DFF7E8', '#EDE3FF', '#FFE8D6', '#FFE4F1', '#D7F6FA', '#EEF1FB'], e: ['🐶', '🐱', '🐤', '🐸', '🦄', '🦊', '🐷', '🐳', '🐼'] },
+  notas: { c: ['#1D2340', '#2B2F5E', '#3B4380', '#4B3C8C', '#5B3B8C', '#3B5B8C', '#2E6B6B', '#6B2E5E', '#3A3A3A'], e: ['🎵', '🎶', '🎹', '🥁', '🎺', '🎸', '🎻', '🪘', '🎷'] } };
+const FREQ = [262, 330, 392, 523, 587, 659, 784, 880, 988];
+let ctx, K, seq, pos, busy, target, players, alive, turn, lives;
+
+function start(c) {
+  ctx = c; players = c.mode === 'solo' ? 1 : +c.mode[0]; K = players > 1 ? 4 : c.diff <= 8 ? 4 : c.diff <= 24 ? 6 : 9;
+  target = 4 + Math.floor(c.diff * .6); seq = []; pos = 0; busy = true; lives = 2; alive = [...Array(players).keys()]; turn = 0;
+  const cols = K === 4 ? 2 : 3;
+  c.stage.innerHTML = `<div style="display:flex;flex-direction:column;gap:14px;align-items:center;width:100%"><div id="msg" style="font-family:var(--display);font-size:22px;min-height:30px;text-align:center"></div>
+    <div id="pads" style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;width:min(92%,${cols * 120}px)"></div></div>`;
+  const P = PADS[Kit.theme()] || PADS.colores;
+  c.stage.querySelector('#pads').innerHTML = Array.from({ length: K }, (_, i) => `<button data-i="${i}" style="aspect-ratio:1;border-radius:${K === 4 ? 28 : 22}px;background:${P.c[i]};box-shadow:inset 0 -8px 0 rgba(0,0,0,.2);font-size:44px;transition:transform .1s,filter .1s;filter:brightness(.85)">${P.e[i] || ''}</button>`).join('');
+  c.stage.querySelectorAll('[data-i]').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); press(+b.dataset.i); }));
+  next();
+}
+function flash(i, d = 320) { const b = ctx.stage.querySelector(`[data-i="${i}"]`); if (!b) return; b.style.filter = 'brightness(1.35)'; b.style.transform = 'scale(1.07)'; Kit.tone(FREQ[i], d / 1000, 'triangle', .14); setTimeout(() => { b.style.filter = 'brightness(.85)'; b.style.transform = ''; }, d); }
+function msg(t) { const m = ctx.stage.querySelector('#msg'); if (m) m.textContent = t; }
+function info() { ctx.info(players > 1 ? `Turno J${alive[turn] + 1} · ${seq.length}` : `${seq.length}/${target} · ${'❤'.repeat(lives)}`); }
+function play() { busy = true; pos = 0; msg('👀 Mira…'); const sp = Math.max(260, 620 - seq.length * 22 - ctx.diff * 4);
+  seq.forEach((n, k) => setTimeout(() => flash(n, sp * .7), 600 + k * sp)); setTimeout(() => { busy = false; msg(players > 1 ? `J${alive[turn] + 1}: repite${seq.length ? ' y añade uno' : ' y empieza'}` : '¡Tu turno!'); }, 600 + seq.length * sp); }
+function next() { if (players === 1) seq.push(Math.floor(ctx.r() * K)); info(); play(); }
+function press(i) {
+  if (busy) return; flash(i, 200);
+  if (players > 1 && pos === seq.length) { seq.push(i); busy = true; turn = (turn + 1) % alive.length; info(); setTimeout(play, 700); return; }
+  if (seq[pos] !== i) return fail();
+  pos++;
+  if (players === 1 && pos === seq.length) { busy = true; if (seq.length >= target) return ctx.win(lives === 2 ? 3 : 2, { text: `Secuencia de ${seq.length} recordada` }); msg('✨ ¡Bien!'); setTimeout(next, 700); }
+}
+function fail() { busy = true; Kit.tone(120, .4, 'sawtooth'); Kit.buzz([60, 40, 60]); ctx.stage.querySelector('#pads').animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 250 });
+  if (players > 1) { const out = alive.splice(turn, 1)[0]; msg(`J${out + 1} eliminado`); if (alive.length === 1) { Kit.confetti(); return setTimeout(() => ctx.result(`¡Gana J${alive[0] + 1}!`, `Secuencia final de ${seq.length}`), 800); } turn %= alive.length; info(); return setTimeout(play, 1200); }
+  lives--; info(); if (lives <= 0) return setTimeout(() => ctx.lose(`Llegaste a ${seq.length - 1} de ${target}`), 400); msg('¡Ups! Otra vez'); setTimeout(play, 1000); }
+
+Kit.game({ tutorial: [["👀","Mira y escucha","Los botones se iluminan en orden con su sonido.","🟥 🟦 🟨 🟩"],["🔁","Repite la secuencia","En cada ronda se añade un paso más y va más rápido.",null],["👥","Por turnos","Con 2 a 4 jugadores, cada uno repite la secuencia y añade un paso. Quien falla, queda fuera.",null]], id: 'simon', name: 'Simón', map: 'nubes', mood: 'alegre', color: 'linear-gradient(135deg,#FDA4AF,#8E5CF7)', levels: 60,
+  tagline: 'Memoriza la secuencia de luces y sonidos y repítela. Solo o por turnos: cada uno repite y añade una.',
+  modes: [{ id: 'solo', name: '1 jugador' }, { id: '2p', name: '2' }, { id: '3p', name: '3' }, { id: '4p', name: '4' }],
+  art: '<svg viewBox="0 0 70 70"><rect x="8" y="8" width="25" height="25" rx="7" fill="#fff"/><rect x="37" y="8" width="25" height="25" rx="7" fill="#F5B82E"/><rect x="8" y="37" width="25" height="25" rx="7" fill="#2DB57A"/><rect x="37" y="37" width="25" height="25" rx="7" fill="#fff" opacity=".6"/></svg>',
+  themes: [{ id: 'colores', name: 'Colores', pv: '🟥', bg: '#FFE0E6' }, { id: 'animales', name: 'Animales', cost: 100, pv: '🐶', bg: '#FFF3CF' }, { id: 'notas', name: 'Instrumentos', cost: 150, pv: '🎹', bg: '#E2E6FF' }],
+  start });
+})();
+</script></body></html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Espejos</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const D = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // derecha, abajo, izquierda, arriba
+const TH = { laser: { bg: '#0E1230', cell: '#1A2050', beam: '#FF3B5C', glow: '#FF8FA3', tgt: '💎' }, sol: { bg: '#FFF4D6', cell: '#FFE7A6', beam: '#F59E0B', glow: '#FDE68A', tgt: '🌻' }, oceano: { bg: '#073B5C', cell: '#0B5580', beam: '#22D3EE', glow: '#A5F3FC', tgt: '🐚' } };
+let ctx, N, grid, src, targets, moves, t0;
+// '/' refleja: derecha→arriba, arriba→derecha... ; '\\' refleja derecha→abajo
+const refl = (m, d) => m === '/' ? [3, 2, 1, 0][d] : [1, 0, 3, 2][d];
+
+function trace() { let x = src.x, y = src.y, d = src.d; const path = [[x, y]], lit = new Set(), seen = new Set();
+  for (let k = 0; k < 400; k++) { x += D[d][0]; y += D[d][1]; if (x < 0 || y < 0 || x >= N || y >= N) { path.push([x, y]); break; }
+    const key = x + ',' + y + ',' + d; if (seen.has(key)) break; seen.add(key); path.push([x, y]); const g = grid[y][x];
+    if (g.t === 'wall') break; if (g.t === 'tgt') lit.add(x + ',' + y); if (g.t === 'mir') d = refl(g.m, d); }
+  return { path, lit }; }
+function generate(r, n) {
+  N = Math.min(5 + Math.floor(n / 6), 9);
+  for (let tries = 0; tries < 300; tries++) {
+    grid = Array.from({ length: N }, () => Array.from({ length: N }, () => ({ t: 'e' })));
+    src = { x: -1, y: Math.floor(r() * N), d: 0 }; let x = src.x, y = src.y, d = 0, turns = 0, steps = 0; const nT = Math.min(2 + Math.floor(n / 5), 6), path = [];
+    const want = Math.min(2 + Math.floor(n / 3), 9);
+    while (steps++ < 60) { x += D[d][0]; y += D[d][1]; if (x < 0 || y < 0 || x >= N || y >= N) break; if (grid[y][x].t !== 'e') break; path.push([x, y]);
+      if (turns < want && r() < .38 && steps > 1) { const nd = [(d + 1) % 4, (d + 3) % 4][Math.floor(r() * 2)]; const m = refl('/', d) === nd ? '/' : '\\'; grid[y][x] = { t: 'mir', m, sol: m }; d = nd; turns++; } }
+    if (turns < Math.min(want, 2) || path.length < 4) continue;
+    const empt = path.filter(([a, b]) => grid[b][a].t === 'e'); if (empt.length < nT) continue;
+    Kit.shuffle(empt, r).slice(0, nT).forEach(([a, b]) => grid[b][a] = { t: 'tgt' });
+    // espejos de despiste y muros fuera del camino
+    const onPath = new Set(path.map(p => p.join(',')));
+    for (let k = 0; k < Math.floor(n / 4) + 1; k++) { const a = Math.floor(r() * N), b = Math.floor(r() * N); if (onPath.has(a + ',' + b) || grid[b][a].t !== 'e') continue; grid[b][a] = r() < .6 ? { t: 'mir', m: r() < .5 ? '/' : '\\' } : { t: 'wall' }; }
+    targets = nT;
+    // desordenar los espejos (al menos uno distinto)
+    let changed = 0; grid.flat().forEach(g => { if (g.t === 'mir' && r() < .6) { g.m = g.m === '/' ? '\\' : '/'; changed++; } });
+    if (!changed || trace().lit.size === nT) continue; return; }
+}
+function start(c) {
+  ctx = c; generate(c.r, c.diff); moves = 0; t0 = Date.now(); const T = TH[Kit.theme()] || TH.laser;
+  c.stage.innerHTML = `<div id="bd" style="position:relative;border-radius:18px;background:${T.bg};padding:10px"></div>`;
+  c.tools([{ t: '💡 Pista · 25', fn: hint }]); draw();
+}
+function draw() {
+  const T = TH[Kit.theme()] || TH.laser, S = Math.floor(Math.min(Math.min(ctx.stage.clientWidth, 420) - 40, ctx.stage.clientHeight - 40) / (N + 1)), bd = ctx.stage.querySelector('#bd'), { path, lit } = trace();
+  const W = (N + 1) * S; bd.style.width = (W + 20) + 'px'; bd.style.height = (N * S + 20) + 'px';
+  let h = `<svg width="${W}" height="${N * S}" style="position:absolute;left:10px;top:10px;overflow:visible;pointer-events:none;z-index:2"><defs><filter id="gl"><feGaussianBlur stdDeviation="3"/></filter></defs>`;
+  const pts = path.map(([x, y]) => `${(x + 1) * S + S / 2},${y * S + S / 2}`).join(' ');
+  h += `<polyline points="${pts}" fill="none" stroke="${T.glow}" stroke-width="10" opacity=".6" filter="url(#gl)"/><polyline points="${pts}" fill="none" stroke="${T.beam}" stroke-width="4" stroke-linejoin="round" stroke-dasharray="10 6" style="animation:flow .6s linear infinite"/></svg>`;
+  h += `<div style="position:absolute;left:10px;top:${10 + src.y * S}px;width:${S}px;height:${S}px;display:grid;place-items:center;font-size:${S * .6}px;z-index:3">🔦</div>`;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const g = grid[y][x], on = lit.has(x + ',' + y), L = 10 + (x + 1) * S, Tp = 10 + y * S;
+    let inner = '';
+    if (g.t === 'mir') inner = `<svg viewBox="0 0 40 40" style="width:86%;height:86%;transition:transform .25s;transform:rotate(${g.m === '/' ? 0 : 90}deg)"><line x1="6" y1="34" x2="34" y2="6" stroke="#E2E8F0" stroke-width="6" stroke-linecap="round"/><line x1="6" y1="34" x2="34" y2="6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`;
+    if (g.t === 'wall') inner = `<div style="width:80%;height:80%;border-radius:6px;background:repeating-linear-gradient(45deg,#626A8C 0 6px,#4B5170 6px 12px)"></div>`;
+    if (g.t === 'tgt') inner = `<span style="font-size:${S * .55}px;filter:${on ? `drop-shadow(0 0 8px ${T.glow})` : 'grayscale(1) opacity(.5)'};transform:scale(${on ? 1.15 : 1});transition:all .3s">${T.tgt}</span>`;
+    h += `<${g.t === 'mir' ? 'button data-x="' + x + '" data-y="' + y + '"' : 'div'} style="position:absolute;left:${L}px;top:${Tp}px;width:${S - 2}px;height:${S - 2}px;border-radius:8px;background:${T.cell};display:grid;place-items:center;${g.t === 'mir' ? 'cursor:pointer;box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)' : ''}">${inner}</${g.t === 'mir' ? 'button' : 'div'}>`; }
+  bd.innerHTML = h + '<style>@keyframes flow{to{stroke-dashoffset:-16}}</style>';
+  bd.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { const g = grid[+b.dataset.y][+b.dataset.x]; g.m = g.m === '/' ? '\\' : '/'; moves++; Kit.tone(520, .05, 'triangle'); draw(); });
+  ctx.info(`${lit.size}/${targets} ${(TH[Kit.theme()] || TH.laser).tgt}`);
+  if (lit.size === targets) { Kit.tone(990, .2); const s = (Date.now() - t0) / 1000; setTimeout(() => ctx.win(s < 20 + N * 4 ? 3 : s < 45 + N * 8 ? 2 : 1, { text: `Luz en todos los objetivos en ${Math.round(s)} s` }), 400); }
+}
+function hint() { if (Kit.coins() < 25) return Kit.toast('Necesitas 25 monedas'); const g = grid.flat().find(g => g.sol && g.m !== g.sol); if (!g) return; Kit.addCoins(-25); g.m = g.sol; draw(); }
+
+Kit.game({ id: 'espejos', name: 'Espejos', map: 'torre', mood: 'espacio', color: 'linear-gradient(135deg,#67E8F9,#0E7490)', levels: 60,
+  tagline: 'Gira los espejos para que la luz llegue a todos los objetivos.',
+  tutorial: [['🔦', 'Sale un rayo de luz', 'Va en línea recta desde la linterna.', '🔦 ➖ ➖ 💎'], ['🪞', 'Toca un espejo para girarlo', 'Cada espejo desvía la luz 90 grados. Los muros la paran.', null], ['💎', 'Ilumina todos los objetivos', 'Cuando la luz pasa por todos, ganas. ¡Hay espejos de despiste!', null]],
+  art: '<svg viewBox="0 0 70 70"><path d="M6 20 L35 20 L50 50 L64 50" stroke="#fff" stroke-width="4" fill="none"/><rect x="30" y="12" width="14" height="4" fill="#E2E8F0" transform="rotate(45 37 14)"/><text x="52" y="46" font-size="14">💎</text></svg>',
+  themes: [{ id: 'laser', name: 'Láser', pv: '💎', bg: '#1A2050' }, { id: 'sol', name: 'Sol', cost: 100, pv: '🌻', bg: '#FFE7A6' }, { id: 'oceano', name: 'Océano', cost: 120, pv: '🐚', bg: '#0B5580' }],
+  onTheme: () => ctx && draw(), start });
+})();
+</script></body></html>

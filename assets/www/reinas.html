@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Reinas</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PALS = { pastel: ['#FFD6A5', '#CDE7FF', '#D8F3DC', '#F1D4FF', '#FFCAD4', '#FDFFB6', '#BDE0FE', '#E2ECE9', '#FFC8A2'],
+  jardin: ['#B7E4C7', '#FFE5A3', '#F9C6D3', '#C7D2FE', '#A7F3D0', '#FDE68A', '#FBCFE8', '#DDD6FE', '#BAE6FD'],
+  noche: ['#3B4380', '#5B3B8C', '#1F6B5E', '#7A3B52', '#2B5C8A', '#6B5B2E', '#4B2E6B', '#2E6B4E', '#6B2E2E'] };
+const PIECE = { pastel: '👑', jardin: '🌷', noche: '⭐' };
+let ctx, N, reg, sol, st, t0, timer, hints;
+
+function solve(reg, N, limit = 2) { let count = 0, out = null; const cols = new Set(), regs = new Set(), q = [];
+  (function bt(r) { if (count >= limit) return; if (r === N) { count++; out = q.slice(); return; }
+    for (let c = 0; c < N; c++) { if (cols.has(c) || regs.has(reg[r][c])) continue; if (r && Math.abs(q[r - 1] - c) < 2) continue;
+      cols.add(c); regs.add(reg[r][c]); q.push(c); bt(r + 1); q.pop(); cols.delete(c); regs.delete(reg[r][c]); } })(0);
+  return { count, out }; }
+function generate(r, N) {
+  for (let tries = 0; tries < 400; tries++) {
+    const q = []; const cols = new Set();
+    const place = row => { if (row === N) return true; for (const c of Kit.shuffle([...Array(N).keys()], r)) { if (cols.has(c) || (row && Math.abs(q[row - 1] - c) < 2)) continue; cols.add(c); q.push(c); if (place(row + 1)) return true; q.pop(); cols.delete(c); } return false; };
+    if (!place(0)) continue;
+    const g = Array.from({ length: N }, () => Array(N).fill(-1)); q.forEach((c, row) => g[row][c] = row);
+    let left = N * N - N;
+    while (left) { const row = Math.floor(r() * N), c = Math.floor(r() * N); if (g[row][c] < 0) continue;
+      const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(r() * 4)], y = row + nb[0], x = c + nb[1];
+      if (y >= 0 && x >= 0 && y < N && x < N && g[y][x] < 0) { g[y][x] = g[row][c]; left--; } }
+    const s = solve(g, N); if (s.count === 1) return { reg: g, sol: s.out }; }
+  return null; }
+
+function start(c) {
+  ctx = c; clearInterval(timer); N = c.diff <= 4 ? 5 : c.diff <= 14 ? 6 : c.diff <= 30 ? 7 : 8;
+  let g = null, k = 0; while (!g) g = generate(Kit.rng(c.seed + k++), N);
+  reg = g.reg; sol = g.sol; st = Array.from({ length: N }, () => Array(N).fill(0)); t0 = Date.now(); hints = 0;
+  c.stage.innerHTML = `<div style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">
+    <div style="font-weight:800;color:var(--muted);font-size:13px;text-align:center;max-width:340px">Una ${PIECE[Kit.theme()] || '👑'} por fila, por columna y por color. Dos no pueden tocarse, ni en diagonal.</div>
+    <div id="g" style="display:grid;grid-template-columns:repeat(${N},1fr);width:min(100%,400px);aspect-ratio:1;border:3px solid #1D2340;border-radius:12px;overflow:hidden"></div></div>`;
+  c.tools([{ t: '💡 Pista · 30', fn: hint }, { t: '↺ Borrar', fn: () => { st = st.map(r => r.map(() => 0)); draw(); } }]);
+  draw(); timer = setInterval(() => { if (!document.body.contains(c.stage.querySelector('#g'))) return clearInterval(timer); c.info(`⏱ ${Math.floor((Date.now() - t0) / 1000)} s`); }, 500);
+}
+function conflicts() { const bad = new Set(), Q = []; st.forEach((row, y) => row.forEach((v, x) => v === 2 && Q.push([y, x])));
+  for (let i = 0; i < Q.length; i++) for (let j = i + 1; j < Q.length; j++) { const [a, b] = Q[i], [c, d] = Q[j];
+    if (a === c || b === d || reg[a][b] === reg[c][d] || (Math.abs(a - c) < 2 && Math.abs(b - d) < 2)) { bad.add(a + ',' + b); bad.add(c + ',' + d); } }
+  return { bad, Q }; }
+function draw() { const pal = PALS[Kit.theme()] || PALS.pastel, dark = Kit.theme() === 'noche', { bad, Q } = conflicts(), g = ctx.stage.querySelector('#g'); g.innerHTML = '';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const R = reg[y][x], bT = y && reg[y - 1][x] !== R, bL = x && reg[y][x - 1] !== R;
+    const e = Kit.h(`<button style="background:${pal[R]};border-top:${bT ? 3 : 1}px solid ${bT ? '#1D2340' : 'rgba(0,0,0,.12)'};border-left:${bL ? 3 : 1}px solid ${bL ? '#1D2340' : 'rgba(0,0,0,.12)'};display:grid;place-items:center;font-size:${Math.floor(260 / N)}px;color:${dark ? '#fff' : '#1D2340'};${bad.has(y + ',' + x) ? 'box-shadow:inset 0 0 0 3px #E5484D;animation:kshake .3s' : ''}">${st[y][x] === 2 ? (PIECE[Kit.theme()] || '👑') : st[y][x] === 1 ? '<span style="opacity:.45;font-size:.6em">✕</span>' : ''}</button>`);
+    e.onclick = () => { st[y][x] = (st[y][x] + 1) % 3; Kit.tone(st[y][x] === 2 ? 660 : 420, .05, 'triangle'); draw(); }; g.appendChild(e); }
+  if (Q.length === N && !bad.size) { clearInterval(timer); const s = (Date.now() - t0) / 1000, par = N * N * 1.6; setTimeout(() => ctx.win(hints ? 1 : s < par ? 3 : s < par * 2.2 ? 2 : 1, { text: `Resuelto en ${Math.round(s)} s` }), 300); } }
+function hint() { if (Kit.coins() < 30) { Kit.toast('Necesitas 30 monedas'); return; } const y = sol.findIndex((c, y) => st[y][c] !== 2); if (y < 0) return;
+  Kit.addCoins(-30); hints++; st[y] = st[y].map((v, x) => x === sol[y] ? 2 : v === 2 ? 0 : v); draw(); }
+
+Kit.game({ tutorial: [["👑","Una por fila, columna y color","Coloca una reina en cada fila, en cada columna y en cada zona de color.","👑 ✕ ✕ 👑"],["🚫","No pueden tocarse","Dos reinas nunca pueden estar juntas, ni siquiera en diagonal.",null],["✕","Toca para marcar","Un toque pone ✕ (descartada) y otro pone la reina. Solo hay una solución.",null]], id: 'reinas', name: 'Reinas', map: 'torre', mood: 'calma', color: 'linear-gradient(135deg,#E9A8FF,#A855F7)', levels: 60,
+  tagline: 'Coloca una reina en cada fila, columna y color. Ninguna puede tocar a otra. Una sola solución.',
+  css: '@keyframes kshake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}',
+  art: '<svg viewBox="0 0 70 70"><text x="35" y="48" font-size="38" text-anchor="middle">👑</text></svg>',
+  themes: [{ id: 'pastel', name: 'Reinas', pv: '👑', bg: '#FFD6A5' }, { id: 'jardin', name: 'Jardín', cost: 120, pv: '🌷', bg: '#B7E4C7' }, { id: 'noche', name: 'Estrellas', cost: 150, pv: '⭐', bg: '#3B4380' }],
+  onTheme: () => ctx && draw(), stop: () => clearInterval(timer), start });
+})();
+</script></body></html>

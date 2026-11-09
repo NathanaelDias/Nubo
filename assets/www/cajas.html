@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Cajas de colores</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const COLS = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7', '#F07A2B', '#FF6FA8'];
+const GLY = ['●', '▲', '■', '◆', '★', '♥', '✚'];
+// Dibujos de 8x8 que se van pintando al hacer tríos
+const ART = [
+  { n: 'Corazón', p: ['.RR..RR.', 'RRRRRRRR', 'RRRRRRRR', 'RRRRRRRR', '.RRRRRR.', '..RRRR..', '...RR...', '........'], c: { R: '#E5484D' } },
+  { n: 'Árbol', p: ['...GG...', '..GGGG..', '.GGGGGG.', '..GGGG..', '.GGGGGG.', 'GGGGGGGG', '...BB...', '...BB...'], c: { G: '#2DB57A', B: '#8A5A33' } },
+  { n: 'Casa', p: ['...RR...', '..RRRR..', '.RRRRRR.', 'RRRRRRRR', '.YYYYYY.', '.YBBYWY.', '.YBBYYY.', '.YBBYYY.'], c: { R: '#E5484D', Y: '#F5D78E', B: '#8A5A33', W: '#7FD3FF' } },
+  { n: 'Gato', p: ['O......O', 'OO....OO', 'OOOOOOOO', 'OKOOOOKO', 'OOOOOOOO', 'OOOPPOOO', '.OOOOOO.', '..O..O..'], c: { O: '#F07A2B', K: '#1D2340', P: '#FF6FA8' } },
+  { n: 'Pez', p: ['........', '..BBBB..', '.BBBBBB.B', 'BKBBBBBBB', '.BBBBBB.B', '..BBBB..', '........', '........'], c: { B: '#3E7BFA', K: '#1D2340' } },
+  { n: 'Sol', p: ['Y..Y..Y.', '.Y.YY.Y.', '..YYYY..', 'YYYYYYYY', '..YYYY..', '.Y.YY.Y.', 'Y..Y..Y.', '........'], c: { Y: '#F5B82E' } },
+  { n: 'Seta', p: ['..RRRR..', '.RWRRWR.', 'RRRRRRRR', 'RWRRRRWR', '...WW...', '...WW...', '..WWWW..', '........'], c: { R: '#E5484D', W: '#FFF4E0' } }];
+const TH = {
+  cajas: { bg: '#C58A52', cell: '#E9C79D', shape: '8px', deco: '' },
+  caramelos: { bg: '#E86F9A', cell: '#FBD3E1', shape: '50%', deco: 'background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px)' },
+  regalos: { bg: '#2E6B4E', cell: '#DDEBE2', shape: '6px', deco: 'background-image:linear-gradient(90deg,transparent 42%,rgba(255,255,255,.85) 42% 58%,transparent 58%),linear-gradient(transparent 42%,rgba(255,255,255,.85) 42% 58%,transparent 58%)' } };
+
+let hide = false, ctx, boxes, tray, cap, hist, used, art, cleared, totalTriples, order, board, trayEl, artEl, u;
+
+function generate(r, n) {
+  const ncol = Math.min(4 + Math.floor(n / 3), 7), target = Math.min(21 + Math.floor(n * 1.8), 60), win = n < 4 ? 6 : 9;
+  const pos = [];
+  for (let y = 0; y <= 10; y += 2) for (let x = 0; x <= 10; x += 2) if (r() < .78) pos.push({ x, y, l: 0 });
+  for (let y = 1; y <= 9; y += 2) for (let x = 1; x <= 9; x += 2) if (r() < .55) pos.push({ x, y, l: 1 });
+  for (let y = 2; y <= 8; y += 2) for (let x = 2; x <= 8; x += 2) if (r() < .3 && n > 4) pos.push({ x, y, l: 2 });
+  let bx = Kit.shuffle(pos, r).slice(0, Math.max(9, Math.min(target, pos.length)));
+  bx.forEach((b, i) => { b.id = i; b.alive = true; });
+  // orden de retirada válido (siempre se quita una caja libre)
+  const alive = new Set(bx.map(b => b.id)), ord = [];
+  const freeIn = (b, set) => !bx.some(o => set.has(o.id) && o.l > b.l && Math.abs(o.x - b.x) < 2 && Math.abs(o.y - b.y) < 2);
+  while (alive.size) { const fr = bx.filter(b => alive.has(b.id) && freeIn(b, alive)); const p = fr[Math.floor(r() * fr.length)]; ord.push(p); alive.delete(p.id); }
+  const extra = ord.length % 3; const drop = new Set(ord.splice(ord.length - extra, extra).map(b => b.id)); bx = bx.filter(b => !drop.has(b.id));
+  // colores por tríos consecutivos en ese orden, mezclados de dos en dos: nunca hace falta más de 6 huecos
+  for (let i = 0; i < ord.length; i += win) { const chunk = ord.slice(i, i + win), cs = [];
+    for (let k = 0; k < chunk.length / 3; k++) { const c = Math.floor(r() * ncol); cs.push(c, c, c); }
+    Kit.shuffle(cs, r).forEach((c, j) => chunk[j].c = c); }
+  // candados: la caja no se puede coger hasta haber hecho X tríos (siempre compatible con el orden válido)
+  if (n >= 6) ord.forEach((b, p) => { const k = Math.floor(p / 3) - 3; if (k >= 2 && r() < .18) b.lock = Math.min(k, 9); });
+  return bx;
+}
+const free = b => !boxes.some(o => o.alive && o.l > b.l && Math.abs(o.x - b.x) < 2 && Math.abs(o.y - b.y) < 2);
+
+function start(c) {
+  ctx = c; const r = c.r; boxes = generate(r, c.diff); tray = []; cap = 7; hist = []; used = 0; cleared = 0; totalTriples = boxes.length / 3; hide = c.diff >= 3;
+  art = ART[(c.n + (c.daily ? 3 : 0)) % ART.length];
+  const th = TH[Kit.theme()] || TH.cajas;
+  c.stage.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%">
+    <div style="display:flex;align-items:center;gap:10px;font-weight:900;color:var(--muted)"><div id="art" style="display:grid;grid-template-columns:repeat(8,9px);gap:1px;padding:5px;background:#fff;border-radius:10px;border:1px solid var(--line)"></div><span id="artT">${art.n}<br><small>0 %</small></span></div>
+    <div id="board" style="position:relative;border-radius:20px;background:${th.bg};box-shadow:inset 0 -6px 0 rgba(0,0,0,.18)"></div>
+    <div id="tray" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;background:#fff;border:2px solid var(--line);border-radius:16px;padding:6px;width:min(100%,380px)"></div></div>`;
+  board = c.stage.querySelector('#board'); trayEl = c.stage.querySelector('#tray'); artEl = c.stage.querySelector('#art');
+  artEl.innerHTML = art.p.flatMap((row, y) => [...row.padEnd(8, '.').slice(0, 8)].map((ch, x) => `<i data-k="${y * 8 + x}" style="width:9px;height:9px;border-radius:2px;background:${ch === '.' ? '#F2F3F8' : '#E3E6F2'}"></i>`)).join('');
+  order = Kit.shuffle(art.p.flatMap((row, y) => [...row.padEnd(8, '.').slice(0, 8)].map((ch, x) => ch === '.' ? null : { k: y * 8 + x, col: art.c[ch] })).filter(Boolean), Kit.rng(c.seed));
+  const W = Math.min(c.stage.clientWidth - 24, 380); u = W / 12.6; board.style.width = board.style.height = (u * 12.6) + 'px';
+  c.tools([{ t: '↶ Deshacer · 15', fn: undo }, { t: '🔀 Barajar · 25', fn: shuffleBoard }, { t: '+1 hueco · 40', fn: () => { if (cap === 8) return; if (!pay(40)) return; cap = 8; used++; draw(); } }]);
+  draw(); if (!Kit.ls.get('cajas-tuto', 0) || c.n === 1) tutorial();
+}
+function boxHTML(b, small) { const th = TH[Kit.theme()] || TH.cajas;
+  return `<div style="width:100%;height:100%;border-radius:${th.shape};background:${COLS[b.c]};${th.deco};box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),inset 0 2px 0 rgba(255,255,255,.35);display:grid;place-items:center;color:rgba(255,255,255,.9);font-size:${small ? 14 : u * .9}px;font-weight:900">${GLY[b.c]}</div>`; }
+function draw() {
+  board.innerHTML = '';
+  boxes.filter(b => b.alive).sort((a, b) => a.l - b.l).forEach(b => {
+    const f = free(b), e = document.createElement('button');
+    Object.assign(e.style, { position: 'absolute', left: (b.x * u + u * .3) + 'px', top: (b.y * u + u * .3) + 'px', width: (2 * u - 2) + 'px', height: (2 * u - 2) + 'px', filter: f ? 'none' : 'brightness(.55) saturate(.6)', transition: 'transform .15s', zIndex: b.l + 1, transform: `translate(${b.l * -2}px,${b.l * -3}px)` });
+    const locked = b.lock && cleared < b.lock;
+    e.innerHTML = !f && hide ? `<div style="width:100%;height:100%;border-radius:8px;background:#8E95B8;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2);display:grid;place-items:center;color:rgba(255,255,255,.7);font-weight:900;font-size:${u * .8}px">?</div>` : boxHTML(b);
+    if (locked) e.insertAdjacentHTML('beforeend', `<div style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(29,35,64,.45);border-radius:8px;color:#fff;font-weight:900;font-size:${u * .62}px">🔒${b.lock - cleared}</div>`);
+    e.onclick = () => pick(b, e); board.appendChild(e); });
+  const cnt = {}; tray.forEach(t => cnt[t.c] = (cnt[t.c] || 0) + 1);
+  trayEl.style.borderColor = tray.length >= cap - 1 ? 'var(--bad)' : tray.length >= cap - 2 ? '#F2A516' : 'var(--line)';
+  trayEl.style.animation = tray.length >= cap - 1 ? 'tw .5s infinite alternate' : 'none';
+  trayEl.innerHTML = Array.from({ length: 8 }, (_, i) => i >= cap ? '<div style="aspect-ratio:1;border-radius:8px;background:#F2F3F8;opacity:.4"></div>' : tray[i] ? `<div style="aspect-ratio:1;${cnt[tray[i].c] === 2 ? 'filter:drop-shadow(0 0 5px #FFD23F);transform:scale(1.06)' : ''}">${boxHTML(tray[i], 1)}</div>` : '<div style="aspect-ratio:1;border-radius:8px;background:#EEF1FB"></div>').join('');
+  const pct = Math.round(cleared / totalTriples * 100); ctx.stage.querySelector('#artT small').textContent = pct + ' %';
+  const paint = Math.round(order.length * cleared / totalTriples); order.forEach((o, i) => { const el = artEl.children[o.k]; if (el) el.style.background = i < paint ? o.col : '#E3E6F2'; });
+  ctx.info(`${boxes.filter(b => b.alive).length} cajas`);
+}
+function pick(b, e) {
+  if (!free(b)) { e.animate([{ transform: e.style.transform + ' translateX(-3px)' }, { transform: e.style.transform + ' translateX(3px)' }], { duration: 120 }); Kit.tone(160, .1, 'square', .04); return; }
+  if (tray.length >= cap) return;
+  if (b.lock && cleared < b.lock) { Kit.toast(`Candado: haz ${b.lock - cleared} trío${b.lock - cleared > 1 ? 's' : ''} más para abrirla`); Kit.tone(200, .1, 'square', .04); return; }
+  hist.push({ tray: tray.slice(), alive: boxes.map(x => x.alive), cleared });
+  b.alive = false; let at = tray.length; for (let i = tray.length - 1; i >= 0; i--) if (tray[i].c === b.c) { at = i + 1; break; }
+  tray.splice(at, 0, b); Kit.tone(420 + tray.length * 40, .06, 'triangle');
+  const same = tray.filter(t => t.c === b.c);
+  if (same.length === 3) { tray = tray.filter(t => t.c !== b.c); cleared++; Kit.tone(880, .12); const r = trayEl.getBoundingClientRect(); Kit.burst(r.left + r.width / 2, r.top, COLS[b.c]); }
+  draw();
+  if (!boxes.some(x => x.alive) && !tray.length) return ctx.win(used === 0 ? 3 : used === 1 ? 2 : 1, { title: `¡${art.n} completado!`, text: 'Has pintado el dibujo entero. Se guarda en tu álbum.' });
+  if (tray.length >= cap) setTimeout(() => ctx.lose('La bandeja se ha llenado. Piensa qué cajas liberar primero.'), 250);
+}
+function pay(n) { if (Kit.coins() < n) { Kit.toast(`Necesitas ${n} monedas`); return false; } Kit.addCoins(-n); return true; }
+function tutorial() {
+  Kit.ls.set('cajas-tuto', 1);
+  const steps = [['👆', 'Toca una caja libre', 'Solo puedes coger las que no tienen otra encima. Las tapadas se ven grises con «?».'],
+    ['🧺', 'Va a la bandeja', 'Tienes 7 huecos. Si se llenan, pierdes. Brillan las parejas que ya tienes.'],
+    ['✨', '3 iguales desaparecen', 'Cada trío pinta un trozo del dibujo. Piensa qué cajas liberar antes: el truco es no llenar la bandeja.'],
+    ['🔒', 'Candados', 'Algunas cajas se abren al hacer varios tríos. ¡Planifica el orden!']];
+  let i = 0; const ov = Kit.h('<div class="k-ov"><div class="k-card"></div></div>'); const card = ov.firstChild;
+  const show = () => { const [e, t, d] = steps[i]; card.innerHTML = `<div style="font-size:54px;animation:kpop .4s">${e}</div><h2 style="font-size:24px">${t}</h2><p>${d}</p><div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px">${steps.map((_, j) => `<i style="width:8px;height:8px;border-radius:4px;background:${j === i ? 'var(--accent)' : 'var(--line)'}"></i>`).join('')}</div><button class="pri">${i < steps.length - 1 ? 'Siguiente' : '¡A jugar!'}</button>`;
+    card.querySelector('button').onclick = () => { i++; if (i < steps.length) show(); else ov.remove(); }; };
+  show(); document.body.appendChild(ov);
+}
+function undo() { if (!hist.length) return; if (!pay(15)) return; const h = hist.pop(); used++; tray = h.tray; cleared = h.cleared; boxes.forEach((b, i) => b.alive = h.alive[i]); draw(); }
+function shuffleBoard() { if (!pay(25)) return; const al = boxes.filter(b => b.alive), cs = Kit.shuffle(al.map(b => b.c), Math.random); al.forEach((b, i) => b.c = cs[i]); used++; draw(); }
+
+Kit.game({ mood: 'alegre', id: 'cajas', name: 'Cajas de colores', map: 'camino', color: 'linear-gradient(135deg,#B69CFF,#8E5CF7)', levels: 60,
+  css: '@keyframes tw{to{box-shadow:0 0 0 4px rgba(229,72,77,.35)}}', tagline: 'Saca las cajas en buen orden: tres iguales desaparecen y pintan un dibujo. ¡No llenes la bandeja!',
+  art: '<svg viewBox="0 0 70 70"><rect x="6" y="36" width="19" height="19" rx="4" fill="#fff" opacity=".9"/><rect x="25.5" y="36" width="19" height="19" rx="4" fill="#FF6FA8"/><rect x="45" y="36" width="19" height="19" rx="4" fill="#fff" opacity=".9"/><rect x="16" y="16" width="19" height="19" rx="4" fill="#22B8CF"/><rect x="35.5" y="16" width="19" height="19" rx="4" fill="#fff" opacity=".9"/></svg>',
+  themes: [{ id: 'cajas', name: 'Cajas', pv: '📦', bg: '#E9C79D' }, { id: 'caramelos', name: 'Caramelos', cost: 120, pv: '🍬', bg: '#FBD3E1' }, { id: 'regalos', name: 'Regalos', cost: 150, pv: '🎁', bg: '#DDEBE2' }],
+  onTheme: () => ctx && !ctx.stage.closest('[hidden]') && draw(),
+  start });
+})();
+</script></body></html>

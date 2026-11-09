@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Parejas</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const SETS = { animales: { e: '🐶🐱🦊🐼🐸🐵🦁🐯🐷🐨🐙🦄🐢🦉🐝', back: 'linear-gradient(135deg,#FF8FA3,#E5484D)' },
+  frutas: { e: '🍎🍌🍇🍓🍒🍍🥝🍑🍉🥥🍋🍐🫐🥕🌽', back: 'linear-gradient(135deg,#7BE0A6,#2DB57A)' },
+  espacio: { e: '🚀🪐⭐🌙☄️👽🛸🌍🌞🔭🌌🛰️👩‍🚀🌠🧑‍🚀', back: 'linear-gradient(135deg,#5B6CFF,#1D2340)' } };
+const PC = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A'];
+let ctx, cards, open, moves, lock, players, turn, score, matched;
+const css = `.pj{perspective:600px;aspect-ratio:3/4}.pj .in{position:relative;width:100%;height:100%;transition:transform .35s;transform-style:preserve-3d}
+.pj.up .in{transform:rotateY(180deg)}.pj .f,.pj .b{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;display:grid;place-items:center}
+.pj .b{box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}.pj .b::after{content:"?";color:rgba(255,255,255,.6);font-family:var(--display);font-size:24px}
+.pj .f{background:#fff;transform:rotateY(180deg);border:2px solid var(--line)}.pj.ok .f{border-color:var(--ok);background:#E8F8EF}`;
+
+function start(c) {
+  ctx = c; players = c.mode === 'solo' ? 1 : +c.mode[0]; turn = 0; score = Array(players).fill(0); moves = 0; open = []; lock = false; matched = 0;
+  const pairs = players > 1 ? 10 : Math.min(4 + Math.floor(c.diff / 2), 15), S = SETS[Kit.theme()] || SETS.animales;
+  const em = [...new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(S.e)].map(x => x.segment);
+  const pick = Kit.shuffle(em.slice(), c.r).slice(0, pairs); cards = Kit.shuffle(pick.concat(pick).map((e, i) => ({ e, id: i, done: false })), c.r);
+  const cols = cards.length <= 12 ? 4 : cards.length <= 20 ? 5 : 6;
+  c.stage.innerHTML = `<style>${css}</style><div style="width:100%;display:flex;flex-direction:column;gap:10px;align-items:center">
+    ${players > 1 ? `<div id="sc" style="display:flex;gap:6px;width:100%;justify-content:center"></div>` : ''}
+    <div id="g" style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:7px;width:min(100%,${cols * 74}px)"></div></div>`;
+  const g = c.stage.querySelector('#g');
+  cards.forEach((cd, i) => { const b = Kit.h(`<button class="pj"><div class="in"><div class="b" style="background:${S.back}"></div><div class="f" style="font-size:${cols > 5 ? 24 : 30}px">${cd.e}</div></div></button>`); b.onclick = () => flip(i, b); cd.el = b; g.appendChild(b); });
+  c.tools([{ t: '👀 Mirar 2 s · 25', fn: peek }]); upd();
+}
+function upd() { if (players === 1) { ctx.info(`${moves} intentos`); return; }
+  ctx.stage.querySelector('#sc').innerHTML = score.map((s, i) => `<div style="flex:1;max-width:90px;text-align:center;border-radius:14px;padding:6px;font-weight:900;color:#fff;background:${PC[i]};opacity:${i === turn ? 1 : .45};transform:scale(${i === turn ? 1.06 : 1})">J${i + 1} · ${s}</div>`).join('');
+  ctx.info(`Turno de J${turn + 1}`); }
+function flip(i, b) {
+  const cd = cards[i]; if (lock || cd.done || open.includes(i)) return;
+  b.classList.add('up'); open.push(i); Kit.tone(520, .05, 'triangle');
+  if (open.length < 2) return;
+  moves++; lock = true; const [a, z] = open;
+  if (cards[a].e === cards[z].e) {
+    setTimeout(() => { [a, z].forEach(j => { cards[j].done = true; cards[j].el.classList.add('ok'); }); matched++; score[turn]++; open = []; lock = false; Kit.tone(880, .12); upd(); end(); }, 350);
+  } else setTimeout(() => { [a, z].forEach(j => cards[j].el.classList.remove('up')); open = []; lock = false; Kit.tone(220, .08, 'square', .04); if (players > 1) turn = (turn + 1) % players; upd(); }, 800);
+  upd();
+}
+function end() { if (matched * 2 < cards.length) return;
+  if (players === 1) { const p = cards.length / 2; return ctx.win(moves <= p * 1.4 ? 3 : moves <= p * 2 ? 2 : 1, { text: `${moves} intentos para ${p} parejas` }); }
+  const best = Math.max(...score), w = score.map((s, i) => s === best ? 'J' + (i + 1) : null).filter(Boolean);
+  Kit.confetti(); ctx.result(w.length > 1 ? '¡Empate!' : `¡Gana ${w[0]}!`, score.map((s, i) => `J${i + 1}: ${s}`).join(' · ')); }
+function peek() { if (Kit.coins() < 25) { Kit.toast('Necesitas 25 monedas'); return; } Kit.addCoins(-25); lock = true;
+  cards.forEach(c => c.done || c.el.classList.add('up')); setTimeout(() => { cards.forEach(c => c.done || c.el.classList.remove('up')); open = []; lock = false; }, 2000); }
+
+Kit.game({ tutorial: [["🃏","Destapa dos cartas","Si son iguales, se quedan boca arriba. Si no, se vuelven a tapar.","❓ 🐶 ❓ 🐶"],["🧠","Recuerda dónde estaban","Menos intentos, más estrellas.",null],["👥","De 1 a 4 jugadores","Elige el número antes de jugar. Si aciertas, repites turno. Gana quien haga más parejas.",null]], mood: 'alegre', id: 'parejas', name: 'Parejas', map: 'islas', color: 'linear-gradient(135deg,#FF8FA3,#E5484D)', levels: 60,
+  tagline: 'Encuentra las parejas. Juega solo o con hasta 4 personas en el mismo móvil.',
+  modes: [{ id: 'solo', name: '1 jugador' }, { id: '2p', name: '2' }, { id: '3p', name: '3' }, { id: '4p', name: '4' }],
+  art: '<svg viewBox="0 0 70 70"><rect x="8" y="14" width="24" height="32" rx="5" fill="#fff" transform="rotate(-8 20 30)"/><rect x="38" y="14" width="24" height="32" rx="5" fill="#fff" transform="rotate(8 50 30)"/><circle cx="20" cy="30" r="7" fill="#E5484D"/><circle cx="50" cy="30" r="7" fill="#E5484D"/></svg>',
+  themes: [{ id: 'animales', name: 'Animales', pv: '🐶', bg: '#FFE0E6' }, { id: 'frutas', name: 'Frutas', cost: 100, pv: '🍓', bg: '#DFF7E8' }, { id: 'espacio', name: 'Espacio', cost: 150, pv: '🚀', bg: '#E2E6FF' }],
+  start });
+})();
+</script></body></html>

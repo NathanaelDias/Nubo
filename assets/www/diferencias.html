@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Diferencias</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PAL = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7', '#F07A2B', '#FF6FA8', '#22B8CF', '#FFFFFF', '#1D2340'];
+// Objetos dibujados con formas simples (escala s, color c). Devuelven SVG centrado en 0,0
+const OBJ = {
+  arbol: (c, s) => `<rect x="-3" y="2" width="6" height="14" fill="#8A5A33"/><circle cx="0" cy="-6" r="12" fill="${c}"/>`,
+  casa: (c, s) => `<rect x="-14" y="-6" width="28" height="22" fill="${c}"/><path d="M-17 -6 L0 -20 L17 -6Z" fill="#B3212F"/><rect x="-4" y="4" width="8" height="12" fill="#8A5A33"/><rect x="-11" y="-2" width="6" height="6" fill="#BFE3FF"/>`,
+  sol: (c) => `<circle r="11" fill="${c}"/><g stroke="${c}" stroke-width="3" stroke-linecap="round"><path d="M0-18v-4M0 18v4M-18 0h-4M18 0h4M-13-13l-3-3M13 13l3 3M13-13l3-3M-13 13l-3 3"/></g>`,
+  nube: (c) => `<g fill="${c}"><circle cx="-9" cy="2" r="8"/><circle cx="2" cy="-3" r="10"/><circle cx="11" cy="3" r="7"/><rect x="-16" y="2" width="32" height="8" rx="4"/></g>`,
+  flor: (c) => `<path d="M0 0v14" stroke="#2DB57A" stroke-width="2.5"/><g fill="${c}"><circle cx="0" cy="-6" r="4"/><circle cx="6" cy="0" r="4"/><circle cx="0" cy="6" r="4"/><circle cx="-6" cy="0" r="4"/></g><circle r="3" fill="#F5B82E"/>`,
+  pelota: (c) => `<circle r="8" fill="${c}"/><path d="M-8 0h16M0-8v16" stroke="#fff" stroke-width="2"/>`,
+  coche: (c) => `<rect x="-16" y="-4" width="32" height="10" rx="4" fill="${c}"/><path d="M-9-4 L-5-11 H6 L10-4Z" fill="${c}"/><rect x="-4" y="-9" width="8" height="5" fill="#BFE3FF"/><circle cx="-9" cy="7" r="4" fill="#1D2340"/><circle cx="9" cy="7" r="4" fill="#1D2340"/>`,
+  pajaro: (c) => `<path d="M-10 0 Q-5-7 0 0 Q5-7 10 0" stroke="${c}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+  seta: (c) => `<rect x="-3" y="0" width="6" height="9" fill="#FFF4E0"/><path d="M-11 1 Q0-16 11 1Z" fill="${c}"/><circle cx="-4" cy="-4" r="2" fill="#fff"/><circle cx="4" cy="-3" r="1.6" fill="#fff"/>`,
+  estrella: (c) => `<path d="M0-10 L3-3 L10-3 L4 2 L6 9 L0 5 L-6 9 L-4 2 L-10-3 L-3-3Z" fill="${c}"/>`,
+  cometa: (c) => `<path d="M0-12 L9 0 L0 12 L-9 0Z" fill="${c}"/><path d="M0 12 q4 6 -2 10 q6 4 0 8" stroke="#1D2340" fill="none"/>`,
+  valla: (c) => `<g fill="${c}"><rect x="-16" y="-8" width="5" height="16"/><rect x="-6" y="-8" width="5" height="16"/><rect x="4" y="-8" width="5" height="16"/><rect x="13" y="-8" width="5" height="16"/><rect x="-18" y="-3" width="38" height="3"/></g>`};
+const SKY = { campo: ['#BFE6FF', '#7CCB6B'], playa: ['#9EDCFF', '#F5D78E'], noche: ['#2B2F5E', '#3C6B4A'] };
+let ctx, A, B, diffs, found, misses, t0, timer, BG;
+const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255; const m = v => Math.max(0, Math.min(255, Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f))));
+  return '#' + [m(r), m(g), m(b)].map(v => v.toString(16).padStart(2, '0')).join(''); };
+
+function scene(r, n) { const items = [], W = 300, H = 210, N = 16 + Math.min(n, 18);
+  const ground = Object.keys(OBJ).filter(k => !['sol', 'nube', 'pajaro', 'cometa', 'estrella'].includes(k)), sky = ['sol', 'nube', 'pajaro', 'cometa', 'estrella'];
+  for (let i = 0; i < N; i++) { const air = r() < .35, t = air ? sky[Math.floor(r() * sky.length)] : ground[Math.floor(r() * ground.length)];
+    let x, y, ok = false, tries = 0; while (!ok && tries++ < 40) { x = 22 + r() * (W - 44); y = air ? 22 + r() * 60 : 105 + r() * 90; ok = items.every(o => Math.hypot(o.x - x, o.y - y) > 24); }
+    if (!ok) continue; items.push({ t, x, y, rot: 0, f: 1, s: .55 + r() * .55, c: t === 'arbol' ? ['#2DB57A', '#3C9D5A', '#7BE0A6'][Math.floor(r() * 3)] : t === 'nube' ? '#FFFFFF' : PAL[Math.floor(r() * 8)], id: i }); }
+  return items; }
+function bgDetails(r) { let d = '<path d="M0 95 Q60 70 120 92 T240 88 T300 90 V110 H0Z" fill="rgba(0,0,0,.08)"/><path d="M130 210 Q150 160 170 120 Q178 100 200 95" stroke="rgba(255,255,255,.35)" stroke-width="16" fill="none"/>';
+  for (let i = 0; i < 40; i++) { const x = r() * 300, y = 100 + r() * 110; d += r() < .5 ? `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l2 -6 l2 6 l2 -5 l2 5" stroke="rgba(0,80,0,.35)" fill="none"/>` : `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(2 + r() * 3).toFixed(1)}" ry="2" fill="rgba(0,0,0,.12)"/>`; }
+  for (let i = 0; i < 6; i++) d += `<circle cx="${(r() * 300).toFixed(1)}" cy="${(r() * 80).toFixed(1)}" r="1.5" fill="rgba(255,255,255,.7)"/>`; return d; }
+function svg(items, theme, marks) { const [s, g] = SKY[theme] || SKY.campo;
+  return `<svg viewBox="0 0 300 210" style="width:100%;display:block;border-radius:16px;background:linear-gradient(${s} 45%,${g} 45%)">${theme === 'noche' ? '<circle cx="260" cy="30" r="14" fill="#FFF3B0"/>' : ''}
+  ${BG}${items.map(o => o.hidden ? '' : `<g transform="translate(${o.x.toFixed(1)} ${o.y.toFixed(1)}) rotate(${o.rot}) scale(${(o.s * o.f).toFixed(2)} ${o.s.toFixed(2)})">${OBJ[o.t](o.c)}</g>`).join('')}
+  ${marks.map((m, i) => `<circle cx="${m.x}" cy="${m.y}" r="${m.r}" fill="none" stroke="#E5484D" stroke-width="3.5" stroke-dasharray="200" stroke-dashoffset="${i === marks.length - 1 ? 200 : 0}" style="animation:dr .5s forwards"/>`).join('')}<style>@keyframes dr{to{stroke-dashoffset:0}}</style></svg>`; }
+
+function start(c) {
+  ctx = c; clearInterval(timer); const r = c.r; A = scene(r, c.diff); B = A.map(o => ({ ...o })); found = []; misses = 0; t0 = Date.now();
+  BG = bgDetails(Kit.rng(c.seed + 5));
+  const lv = c.diff, k = Math.min(5 + Math.floor(lv / 3), 10), subtle = Math.min(.15 + lv * .03, .8); diffs = [];
+  const kinds = lv < 4 ? ['color', 'falta', 'tam'] : ['color', 'falta', 'tam', 'mueve', 'gira', 'espejo', 'tono', 'extra'];
+  for (const o of Kit.shuffle(B.slice(), r)) { if (diffs.length >= k) break; let kind = kinds[Math.floor(r() * kinds.length)];
+    if (kind === 'espejo' && ['sol', 'pelota', 'flor', 'estrella'].includes(o.t)) kind = 'tono';
+    if (kind === 'color') { let nc; do nc = PAL[Math.floor(r() * 8)]; while (nc === o.c); o.c = nc; }
+    else if (kind === 'tono') o.c = shade(o.c === '#FFFFFF' ? '#DDDDDD' : o.c, r() < .5 ? -.28 * (1.4 - subtle) : .35 * (1.4 - subtle));
+    else if (kind === 'falta') o.hidden = true;
+    else if (kind === 'tam') o.s = o.s * (r() < .5 ? 1 - .45 * (1.2 - subtle) : 1 + .5 * (1.2 - subtle));
+    else if (kind === 'mueve') { o.x += (r() < .5 ? -1 : 1) * (14 - subtle * 6); o.y += (r() - .5) * 8; }
+    else if (kind === 'gira') o.rot = (r() < .5 ? -1 : 1) * (45 - subtle * 20);
+    else if (kind === 'espejo') o.f = -1;
+    else if (kind === 'extra') { const t = ['estrella', 'flor', 'pajaro', 'seta'][Math.floor(r() * 4)], ex = { t, x: Math.min(285, Math.max(15, o.x + 20)), y: Math.min(200, Math.max(15, o.y - 12)), s: .45, rot: 0, f: 1, c: PAL[Math.floor(r() * 8)] };
+      B.push(ex); diffs.push({ x: ex.x, y: ex.y, r: 12 }); continue; }
+    diffs.push({ x: o.x, y: o.y, r: 11 + 10 * o.s }); }
+  c.stage.innerHTML = `<div style="width:min(100%,420px);display:flex;flex-direction:column;gap:8px"><div id="a"></div><div id="b"></div></div>`;
+  c.tools([{ t: '💡 Pista · 20', fn: hint }]); draw();
+  timer = setInterval(() => { if (!document.body.contains(ctx.stage.querySelector('#a'))) return clearInterval(timer); ctx.info(`${found.length}/${diffs.length} · ${Math.floor((Date.now() - t0) / 1000)} s · ${'❤'.repeat(3 - misses)}`); }, 500);
+}
+function draw() { const th = Kit.theme(), mk = found.map(i => diffs[i]);
+  ['a', 'b'].forEach((id, j) => { const el = ctx.stage.querySelector('#' + id); el.innerHTML = svg(j ? B : A, th, mk); el.firstChild.onclick = e => tap(e, el.firstChild); }); }
+function tap(e, el) { const b = el.getBoundingClientRect(), x = (e.clientX - b.left) / b.width * 300, y = (e.clientY - b.top) / b.height * 210;
+  const i = diffs.findIndex((d, j) => !found.includes(j) && Math.hypot(d.x - x, d.y - y) < d.r + 4);
+  if (i >= 0) { found.push(i); Kit.tone(880, .1); Kit.burst(e.clientX, e.clientY, '#E5484D'); draw();
+    if (found.length === diffs.length) { clearInterval(timer); const s = (Date.now() - t0) / 1000; ctx.win(misses === 0 && s < 15 + diffs.length * 7 ? 3 : misses <= 1 && s < 30 + diffs.length * 12 ? 2 : 1, { text: `Todas en ${Math.round(s)} s` }); } }
+  else { misses++; Kit.tone(150, .15, 'sawtooth'); Kit.buzz(60); if (misses >= 3) { clearInterval(timer); ctx.lose('Tres toques fallidos. ¡Mira con calma!'); } } }
+function hint() { if (Kit.coins() < 20) { Kit.toast('Necesitas 20 monedas'); return; } const i = diffs.findIndex((_, j) => !found.includes(j)); if (i < 0) return;
+  Kit.addCoins(-20); found.push(i); misses = Math.min(misses, 2); draw(); if (found.length === diffs.length) { clearInterval(timer); ctx.win(1); } }
+
+Kit.game({ tutorial: [["👀","Dos escenas casi iguales","Arriba el original y abajo la copia con cambios. Toca la diferencia en cualquiera de las dos.","🌳 ↔ 🌲"],["🎨","Cambios de todo tipo","Colores, tonos sutiles, tamaños, giros, reflejos y objetos de más o de menos.",null],["❤","Cuidado al tocar","Tres toques fallidos y pierdes. Cuanto más rápido, más estrellas.",null]], id: 'diferencias', name: 'Diferencias', map: 'nubes', color: 'linear-gradient(135deg,#7DD3FC,#2B8FD6)', levels: 60,
+  mood: 'calma', tagline: 'Encuentra lo que cambia: colores, tonos, tamaños, giros, reflejos y objetos de más o de menos.',
+  art: '<svg viewBox="0 0 70 70"><rect x="6" y="14" width="27" height="38" rx="5" fill="#fff"/><rect x="37" y="14" width="27" height="38" rx="5" fill="#fff"/><circle cx="19" cy="27" r="5" fill="#F5B82E"/><circle cx="50" cy="27" r="5" fill="#E5484D"/></svg>',
+  themes: [{ id: 'campo', name: 'Campo', pv: '🌳', bg: '#DFF7E8' }, { id: 'playa', name: 'Playa', cost: 100, pv: '🏖️', bg: '#FFF4D6' }, { id: 'noche', name: 'Noche', cost: 150, pv: '🌙', bg: '#E2E6FF' }],
+  onTheme: () => ctx && draw(), stop: () => clearInterval(timer), start });
+})();
+</script></body></html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Laberinto</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const TH = { raton: { me: '🐭', goal: '🧀', star: '⭐', wall: '#8A5A33', floor: '#F6E3C4', fog: '#3B2A1A' }, espacio: { me: '🧑‍🚀', goal: '🚀', star: '💫', wall: '#5B6CFF', floor: '#151A3A', fog: '#05060F' }, mar: { me: '🐠', goal: '🏝️', star: '🐚', wall: '#0E7490', floor: '#BAE6FD', fog: '#073B5C' } };
+let ctx, N, walls, me, goal, stars, got, seen, fog, moves, t0, S;
+// walls[y][x] = [arriba, derecha, abajo, izquierda]
+function generate(r, n) {
+  N = Math.min(6 + Math.floor(n / 3), 15); walls = Array.from({ length: N }, () => Array.from({ length: N }, () => [1, 1, 1, 1]));
+  const vis = Array.from({ length: N }, () => Array(N).fill(false)), st = [[0, 0]]; vis[0][0] = true;
+  const DIR = [[0, -1, 0, 2], [1, 0, 1, 3], [0, 1, 2, 0], [-1, 0, 3, 1]];
+  while (st.length) { const [x, y] = st[st.length - 1], opts = DIR.filter(([dx, dy]) => { const a = x + dx, b = y + dy; return a >= 0 && b >= 0 && a < N && b < N && !vis[b][a]; });
+    if (!opts.length) { st.pop(); continue; } const [dx, dy, w, o] = opts[Math.floor(r() * opts.length)], a = x + dx, b = y + dy; walls[y][x][w] = 0; walls[b][a][o] = 0; vis[b][a] = true; st.push([a, b]); }
+  // algunos atajos para que haya varios caminos
+  for (let k = 0; k < Math.floor(N * N / 12); k++) { const x = Math.floor(r() * (N - 1)), y = Math.floor(r() * N); walls[y][x][1] = 0; walls[y][x + 1][3] = 0; }
+  const dist = bfs(0, 0); let far = [0, 0]; dist.forEach((row, y) => row.forEach((d, x) => { if (d > dist[far[1]][far[0]]) far = [x, y]; }));
+  me = [0, 0]; goal = far; const cells = []; dist.forEach((row, y) => row.forEach((d, x) => { if (d > 3 && !(x === goal[0] && y === goal[1])) cells.push([x, y, d]); }));
+  stars = Kit.shuffle(cells, r).sort((a, b) => b[2] - a[2]).slice(0, Math.max(6, cells.length / 3 | 0)); stars = Kit.shuffle(stars, r).slice(0, 3).map(([x, y]) => [x, y]);
+  fog = n >= 5; seen = new Set(['0,0']); got = 0; moves = 0;
+}
+function bfs(sx, sy) { const d = Array.from({ length: N }, () => Array(N).fill(-1)), q = [[sx, sy]]; d[sy][sx] = 0;
+  while (q.length) { const [x, y] = q.shift(); [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]].forEach(([dx, dy, w]) => { if (walls[y][x][w]) return; const a = x + dx, b = y + dy; if (d[b][a] < 0) { d[b][a] = d[y][x] + 1; q.push([a, b]); } }); }
+  return d; }
+function start(c) {
+  ctx = c; generate(c.r, c.diff); t0 = Date.now();
+  c.stage.innerHTML = `<div id="mz" style="position:relative;touch-action:none"></div>`;
+  S = Math.floor(Math.min(Math.min(c.stage.clientWidth, 440) - 20, c.stage.clientHeight - 20) / N);
+  const mz = c.stage.querySelector('#mz'); mz.style.width = mz.style.height = (N * S) + 'px';
+  let sx, sy; mz.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; });
+  mz.addEventListener('pointerup', e => { const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.hypot(dx, dy) < 18) return; go(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0)); });
+  c.tools([{ t: '⬅', fn: () => go(3) }, { t: '⬆', fn: () => go(0) }, { t: '⬇', fn: () => go(2) }, { t: '➡', fn: () => go(1) }]);
+  draw();
+}
+function look() { const [x, y] = me; for (let b = y - 2; b <= y + 2; b++) for (let a = x - 2; a <= x + 2; a++) if (a >= 0 && b >= 0 && a < N && b < N && Math.abs(a - x) + Math.abs(b - y) <= 2) seen.add(a + ',' + b); }
+function draw() {
+  const T = TH[Kit.theme()] || TH.raton, mz = ctx.stage.querySelector('#mz'); look();
+  let h = `<svg width="${N * S}" height="${N * S}" style="position:absolute;inset:0;border-radius:12px;background:${T.floor}">`;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const w = walls[y][x], X = x * S, Y = y * S;
+    if (w[0]) h += `<line x1="${X}" y1="${Y}" x2="${X + S}" y2="${Y}"/>`; if (w[3]) h += `<line x1="${X}" y1="${Y}" x2="${X}" y2="${Y + S}"/>`;
+    if (y === N - 1 && w[2]) h += `<line x1="${X}" y1="${Y + S}" x2="${X + S}" y2="${Y + S}"/>`; if (x === N - 1 && w[1]) h += `<line x1="${X + S}" y1="${Y}" x2="${X + S}" y2="${Y + S}"/>`; }
+  h = h.replace(/<line /g, `<line stroke="${T.wall}" stroke-width="${Math.max(3, S / 7)}" stroke-linecap="round" `);
+  if (fog) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const d = Math.abs(x - me[0]) + Math.abs(y - me[1]);
+    if (d > 2) h += `<rect x="${x * S}" y="${y * S}" width="${S + .5}" height="${S + .5}" fill="${T.fog}" opacity="${seen.has(x + ',' + y) ? .55 : .97}"/>`; }
+  h += '</svg>';
+  const em = (p, e, cls = '') => `<div class="${cls}" style="position:absolute;left:${p[0] * S}px;top:${p[1] * S}px;width:${S}px;height:${S}px;display:grid;place-items:center;font-size:${S * .62}px;transition:left .14s,top .14s;z-index:2">${e}</div>`;
+  const vis = p => !fog || Math.abs(p[0] - me[0]) + Math.abs(p[1] - me[1]) <= 2 || seen.has(p.join(','));
+  stars.forEach(p => { if (vis(p)) h += em(p, T.star, 'tw'); }); if (vis(goal)) h += em(goal, T.goal, 'tw');
+  mz.innerHTML = h + `<div id="me" style="position:absolute;left:${me[0] * S}px;top:${me[1] * S}px;width:${S}px;height:${S}px;display:grid;place-items:center;font-size:${S * .7}px;transition:left .12s linear,top .12s linear;z-index:3">${T.me}</div><style>.tw{animation:tw 1.2s ease-in-out infinite}@keyframes tw{50%{transform:scale(1.2)}}</style>`;
+  ctx.info(`${'⭐'.repeat(got)}${'☆'.repeat(3 - got)} · ${moves} mov.`);
+}
+// se desliza hasta un cruce, una pared o un objeto
+function go(d) {
+  const DX = [[0, -1], [1, 0], [0, 1], [-1, 0]]; let [x, y] = me, steps = 0;
+  while (!walls[y][x][d]) { x += DX[d][0]; y += DX[d][1]; steps++; seen.add(x + ',' + y);
+    const open = walls[y][x].filter(w => !w).length; if (open > 2 || stars.some(s => s[0] === x && s[1] === y) || (x === goal[0] && y === goal[1])) break; if (walls[y][x][d]) break; }
+  if (!steps) { Kit.tone(160, .06, 'square', .04); const e = ctx.stage.querySelector('#me'); e && e.animate([{ transform: `translate(${DX[d][0] * 4}px,${DX[d][1] * 4}px)` }, { transform: 'none' }], { duration: 120 }); return; }
+  me = [x, y]; moves++; Kit.tone(380 + steps * 30, .05, 'triangle');
+  const si = stars.findIndex(s => s[0] === x && s[1] === y); if (si >= 0) { stars.splice(si, 1); got++; Kit.tone(1046, .15); Kit.tone(1318, .2, 'triangle'); }
+  draw();
+  if (x === goal[0] && y === goal[1]) setTimeout(() => ctx.win(Math.max(1, got), { text: `${got} de 3 estrellas recogidas en ${moves} movimientos` }), 250);
+}
+addEventListener('keydown', e => { const k = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }[e.key]; if (k != null && ctx) go(k); });
+
+Kit.game({ id: 'laberinto', name: 'Laberinto', map: 'camino', mood: 'misterio', color: 'linear-gradient(135deg,#86EFAC,#15803D)', levels: 60,
+  tagline: 'Desliza para moverte: avanzas hasta un cruce. Recoge las 3 estrellas y llega a la salida. Desde el nivel 5, ¡hay niebla!',
+  tutorial: [['👆', 'Desliza el dedo', 'Tu personaje avanza recto hasta un cruce o una pared. También puedes usar las flechas.', '🐭 ➡ ➡ 🧀'], ['⭐', 'Recoge las estrellas', 'Hay 3 estrellas escondidas. Cuantas más cojas, más estrellas consigues en el nivel.', null], ['🌫', 'La niebla', 'Desde el nivel 5 solo ves lo que tienes cerca. Recuerda por dónde has pasado.', null]],
+  art: '<svg viewBox="0 0 70 70"><path d="M10 10H60V60H10V22H48V48H22V34H36" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><circle cx="36" cy="34" r="4" fill="#FFD23F"/></svg>',
+  themes: [{ id: 'raton', name: 'Ratón', pv: '🐭', bg: '#F6E3C4' }, { id: 'espacio', name: 'Espacio', cost: 120, pv: '🧑‍🚀', bg: '#1E2350' }, { id: 'mar', name: 'Mar', cost: 120, pv: '🐠', bg: '#BAE6FD' }],
+  onTheme: () => ctx && draw(), start });
+})();
+</script></body></html>

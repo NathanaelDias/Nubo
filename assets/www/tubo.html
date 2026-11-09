@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Tubo Diario</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&display=swap">
+<style>
+:root{--bg:#EEF1FB;--fg:#1D2340;--muted:#626A8C;--line:#CBD2EC;--card:#fff;--accent:#3E5BD8;--gold:#F2A516;
+  --display:"Lilita One","Arial Rounded MT Bold",system-ui,sans-serif;--body:"Nunito",system-ui,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 12px);gap:10px}
+.top{display:flex;align-items:center;gap:8px}.top h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:800}
+.coin{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE38A,var(--gold) 60%,#C57E00)}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:3px;gap:3px;align-self:flex-start}
+.seg button{padding:7px 12px;border-radius:11px;font-weight:800;font-size:14px;color:var(--muted)}.seg button.on{background:var(--accent);color:#fff}
+.hud{display:flex;justify-content:space-between;font-weight:800;color:var(--muted)}
+.stage{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:14px 12px}
+.tube{width:52px;height:200px;border-radius:0 0 26px 26px;border:3px solid #9AA3C9;border-top:0;background:rgba(255,255,255,.7);
+  display:flex;flex-direction:column-reverse;align-items:center;padding:5px 0;gap:3px;transition:transform .15s;position:relative}
+.tube.sel{transform:translateY(-14px);border-color:var(--accent)}
+.tube.done{border-color:#2DB57A;background:#E5F7EE}
+.ball{width:42px;height:40px;position:relative;transition:transform .15s}.ball svg{width:100%;height:100%;overflow:visible}
+.themes{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.themes button{flex:none;display:flex;align-items:center;gap:6px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:5px 10px;font-weight:800;font-size:13px}
+.themes button.on{border-color:var(--accent)}.themes svg{width:22px;height:22px}
+body.t-caramelos .tube{border-radius:12px 12px 22px 22px;border-top:3px solid #9AA3C9;background:rgba(255,240,248,.85)}
+body.t-planetas{background:#151a3a}body.t-planetas .top h1,body.t-planetas .hud,body.t-planetas .help{color:#EEF0FF}
+body.t-planetas .tube{background:rgba(255,255,255,.08);border-color:#5A63A8}
+body.t-navidad{background:linear-gradient(#DDEBF7,#F4F8FB)}body.t-navidad .tube{border-color:#B3212F;background:rgba(255,255,255,.85)}
+body.t-navidad .tube::before{content:"";position:absolute;top:-6px;left:-4px;right:-4px;height:10px;border-radius:6px;background:#fff;box-shadow:0 2px 0 #CFE0EE}
+body.t-frutas .tube{border-radius:6px 6px 22px 22px;border-color:#B98A55;background:rgba(255,248,232,.9)}
+.tube.sel .ball:last-child{transform:translateY(-36px)}
+.tools{display:flex;gap:8px;justify-content:center}.tools button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-weight:800;font-size:14px}
+.ov{position:fixed;inset:0;background:rgba(29,35,64,.55);display:none;align-items:center;justify-content:center;z-index:5}.ov.show{display:flex}
+.card{background:var(--card);border-radius:24px;padding:24px;text-align:center;width:min(86vw,340px)}
+.card h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}.card p{color:var(--muted);font-weight:700}
+.card button{background:var(--accent);color:#fff;border-radius:14px;padding:13px;width:100%;font-weight:800;font-size:16px}
+.help{font-size:12px;color:var(--muted);text-align:center;font-weight:700}
+
+/* Hoja de temas (se abre con el botón 🎨 de la barra de Nubo) */
+.tsh{position:fixed;inset:0;background:rgba(29,35,64,.5);display:none;align-items:flex-end;justify-content:center;z-index:9}
+.tsh.show{display:flex}
+.tsh>div{background:var(--card);border-radius:24px 24px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);width:min(100%,560px);max-height:80vh;overflow:auto}
+.tsh h3{font-family:var(--display);font-weight:400;font-size:24px;margin:0 0 4px;display:flex;justify-content:space-between;align-items:center}
+.tsh h3 button{font-family:var(--body);font-size:22px;color:var(--muted);padding:0 6px}
+.tsh p{margin:0 0 12px;color:var(--muted);font-weight:700;font-size:13px}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tgrid button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px;border-radius:16px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:12px;text-align:center}
+.tgrid button.on{border-color:var(--accent)}.tgrid button.lock{opacity:.6}
+.tgrid .pv{width:100%;aspect-ratio:1.2;border-radius:12px;display:grid;place-items:center;overflow:hidden}
+.tgrid .pv svg{width:46%;height:auto}.tgrid .pv div svg{width:100%}
+.tgrid small{font-size:11px;color:var(--muted);font-weight:800}
+.tgrid .pass{color:#B86E00}
+body.emb .top,body.emb .seg,body.emb .help{display:none!important}
+body.t-copos{background:linear-gradient(#E3F2FF,#F7FBFF)}body.t-copos .tube{border-color:#8CC4EE;background:rgba(255,255,255,.75)}
+.seg{display:none!important}</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><h1>Tubo Diario</h1><span class="pill"><i class="coin"></i><span id="coins">0</span></span></div>
+  <div class="seg"><button id="mDay" class="on">Reto diario</button><button id="mLv">Niveles</button></div>
+  
+  <div class="hud"><span style="display:flex;align-items:center;gap:8px"><button id="bMap" class="k-back">‹</button><span id="lbl"></span></span><span id="mv"></span></div>
+  <div class="stage" id="stage"></div>
+  <div class="tools"><button id="bU">↶ Deshacer</button><button id="bX">＋ Tubo extra · 30</button><button id="bR">↺</button></div>
+  <div class="help">Toca un tubo y luego otro para pasar la bola de arriba. Solo cae sobre su mismo color o en un tubo vacío.</div>
+</div>
+<div class="tsh" id="tsh"><div><h3>Temas <button id="tshX">✕</button></h3><p>Cambia el aspecto de las bolas. Los exclusivos se ganan con el pase de temporada.</p><div class="tgrid" id="themes"></div></div></div>
+<script src="kit.js"></script>
+<div class="ov" id="ov"><div class="card"><h2 id="oT"></h2><p id="oP"></p><button id="oB"></button></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), CAP=4;
+const COLORS=['#E5484D','#3E7BFA','#F5B82E','#2DB57A','#8E5CF7','#F07A2B','#FF6FA8','#22B8CF'];
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const today=()=>{const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()};
+let mode='day',level=ls.get('tb-level',1),coins=ls.get('mj-coins',0),tubes,sel=null,hist,moves,extra;
+
+// Generador: reparte al azar y comprueba con un solucionador que el nivel tiene solución
+function solvable(t0){const seen=new Set();const key=t=>t.map(x=>x.join('')).sort().join('|');let n=0;
+ const won=t=>t.every(x=>!x.length||(x.length===CAP&&x.every(v=>v===x[0])));
+ function dfs(t){if(won(t))return true;if(++n>60000)return false;const k=key(t);if(seen.has(k))return false;seen.add(k);
+  for(let a=0;a<t.length;a++){if(!t[a].length)continue;const ball=t[a][t[a].length-1];if(t[a].length===CAP&&t[a].every(v=>v===ball))continue;
+   for(let b=0;b<t.length;b++){if(a===b||t[b].length>=CAP)continue;if(t[b].length&&t[b][t[b].length-1]!==ball)continue;if(!t[b].length&&t[a].every(v=>v===ball))continue;
+    t[b].push(t[a].pop());const ok=dfs(t);t[a].push(t[b].pop());if(ok)return true}}return false}
+ return dfs(t0.map(x=>x.slice()))}
+function generate(k,seed){const r=rng(seed);for(let tries=0;tries<50;tries++){const all=[];for(let i=0;i<k;i++)for(let j=0;j<CAP;j++)all.push(i);
+  for(let i=all.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[all[i],all[j]]=[all[j],all[i]]}
+  const t=[];for(let i=0;i<k;i++)t.push(all.slice(i*CAP,i*CAP+CAP));t.push([],[]);
+  if(t.some(x=>x.length&&x.every(v=>v===x[0])))continue;if(solvable(t))return t}return null}
+
+// ---------- Temas de Tubo ----------
+const FRUIT=['manzana','arándano','limón','lima','uva','naranja','melocotón','kiwi'];
+const BALL={
+ caritas:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="${c}"/><circle cx="14" cy="13" r="5" fill="rgba(255,255,255,.4)"/><circle cx="15" cy="20" r="2.4" fill="#1D2340"/><circle cx="25" cy="20" r="2.4" fill="#1D2340"/><path d="M15 26q5 4 10 0" stroke="#1D2340" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+ caramelos:c=>`<svg viewBox="0 0 40 40"><path d="M9 20 L0 12 L2 20 L0 28Z M31 20 L40 12 L38 20 L40 28Z" fill="${c}" opacity=".75"/><ellipse cx="20" cy="20" rx="13" ry="12" fill="${c}"/><path d="M12 13 Q20 20 28 27 M10 20 Q20 26 26 30" stroke="rgba(255,255,255,.55)" stroke-width="3" fill="none"/></svg>`,
+ frutas:(c,i)=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="22" r="16" fill="${c}"/>${i===2?'<ellipse cx="20" cy="22" rx="18" ry="14" fill="'+c+'"/>':''}${i===4?'<circle cx="13" cy="18" r="6" fill="rgba(0,0,0,.12)"/><circle cx="26" cy="27" r="6" fill="rgba(0,0,0,.12)"/>':''}<path d="M20 7 v-5" stroke="#6B4B2E" stroke-width="2.5" stroke-linecap="round"/><path d="M21 5 q8 -5 11 2 q-7 3 -11 -2" fill="#2DB57A"/><circle cx="13" cy="16" r="4" fill="rgba(255,255,255,.45)"/>${i===1?'<path d="M16 9 l4 3 4-3" stroke="#1D2340" stroke-width="1.5" fill="none"/>':''}</svg>`,
+ planetas:(c,i)=>`<svg viewBox="0 0 40 40">${i%2?'<ellipse cx="20" cy="20" rx="20" ry="6" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" transform="rotate(-18 20 20)"/>':''}<circle cx="20" cy="20" r="14" fill="${c}"/><circle cx="14" cy="16" r="3" fill="rgba(0,0,0,.18)"/><circle cx="24" cy="25" r="4" fill="rgba(0,0,0,.15)"/><path d="M8 22 q12 4 24 -2" stroke="rgba(255,255,255,.25)" stroke-width="2.5" fill="none"/>${i%2?'<path d="M1 26 Q20 33 39 14" stroke="rgba(255,255,255,.7)" stroke-width="2.5" fill="none" transform="rotate(0)"/>':''}</svg>`,
+ copos:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="${c}"/><circle cx="20" cy="20" r="17" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/><g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 9v22M10.5 14.5l19 11M10.5 25.5l19-11"/><path d="M17 11l3 2 3-2M17 29l3-2 3 2" fill="none"/></g><circle cx="13" cy="12" r="3" fill="rgba(255,255,255,.6)"/></svg>`,
+ navidad:c=>`<svg viewBox="0 0 40 40"><path d="M20 0 v5" stroke="#B98A2E" stroke-width="1.5"/><rect x="16" y="4" width="8" height="5" rx="1.5" fill="#E8B84A"/><circle cx="20" cy="23" r="15" fill="${c}"/><path d="M6 21 q14 6 28 0" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-dasharray="2 3"/><path d="M8 27 q12 5 24 0" stroke="#FFE38A" stroke-width="2" fill="none"/><circle cx="14" cy="17" r="3.5" fill="rgba(255,255,255,.55)"/></svg>`};
+const TTHEMES_X=[{id:'caritas',name:'Caritas',cost:0},{id:'caramelos',name:'Caramelos',cost:80},{id:'frutas',name:'Frutas',cost:120},{id:'planetas',name:'Planetas',cost:150},{id:'navidad',name:'Navidad',cost:100}];
+const TTHEMES=[...TTHEMES_X,{id:'copos',name:'Copos',pass:true}];
+let theme=ls.get('tb-theme','caritas'),owned=ls.get('tb-owned',['caritas']);
+function themesUI(){document.body.className='t-'+theme+(window.self!==window.top?' emb':'');owned=ls.get('tb-owned',owned);
+  $('themes').innerHTML=TTHEMES.map(t=>{const own=owned.includes(t.id);return `<button data-t="${t.id}" class="${t.id===theme?'on':''} ${own?'':'lock'}"><div class="pv" style="background:${t.id==='planetas'?'#151a3a':'#EEF1FB'}"><div style="display:flex;width:84%">${[0,1,2].map(i=>`<div style="flex:1">${BALL[t.id](COLORS[i],i)}</div>`).join('')}</div></div>${t.name}<small class="${t.pass&&!own?'pass':''}">${own?(t.id===theme?'En uso':'Tuyo'):t.pass?'★ Pase de temporada':'🪙 '+t.cost}</small></button>`}).join('');
+  $('themes').querySelectorAll('button').forEach(b=>b.onclick=()=>{const t=TTHEMES.find(x=>x.id===b.dataset.t);coins=ls.get('mj-coins',0);
+    if(!owned.includes(t.id)){if(t.pass){show('Exclusivo del pase','Consíguelo en el Pase de temporada de Nubo.','Vale',()=>{});return}
+      if(coins<t.cost){show('Tema bloqueado',`Te faltan ${t.cost-coins} monedas.`,'Vale',()=>{});return}coins-=t.cost;ls.set('mj-coins',coins);owned.push(t.id);ls.set('tb-owned',owned)}
+    theme=t.id;ls.set('tb-theme',theme);themesUI();render();$('tsh').classList.remove('show')})}
+function start(){const k=mode==='day'?6:Math.min(3+Math.floor(level/2),8),seed=mode==='day'?today():900+level*131;
+  tubes=generate(k,seed)||generate(k,seed+7);sel=null;hist=[];moves=0;extra=false;
+  $('lbl').textContent=mode==='day'?'Reto del '+new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'Nivel '+level;render()}
+function render(){$('stage').innerHTML='';tubes.forEach((t,i)=>{const e=document.createElement('div');e.className='tube'+(sel===i?' sel':'')+(t.length===CAP&&t.every(v=>v===t[0])?' done':'');
+  t.forEach(c=>{const b=document.createElement('div');b.className='ball';b.innerHTML=BALL[theme](COLORS[c],c);e.appendChild(b)});e.onclick=()=>tap(i);$('stage').appendChild(e)});
+  $('mv').textContent=moves+' movimientos';$('coins').textContent=coins}
+function tap(i){if(sel===null){if(tubes[i].length){sel=i;tone(400,.05)}render();return}
+  if(sel===i){sel=null;render();return}const a=tubes[sel],b=tubes[i],ball=a[a.length-1];
+  if(b.length<CAP&&(!b.length||b[b.length-1]===ball)){hist.push(JSON.stringify(tubes));b.push(a.pop());moves++;tone(520+b.length*60,.07);
+    if(b.length===CAP&&b.every(v=>v===b[0]))tone(880,.15);}else{tone(150,.12,'sawtooth')}
+  sel=null;render();if(tubes.every(t=>!t.length||(t.length===CAP&&t.every(v=>v===t[0]))))setTimeout(win,300)}
+function win(){const r=mode==='day'?40:10;coins+=r;ls.set('mj-coins',coins);
+  ls.set('mj-pp',ls.get('mj-pp',0)+(mode==='day'?40:15));if(mode==='day'){ls.set('mj-daily-tubo',today());}else{const k=tubes.filter(x=>x.length).length;LH.record(level,moves<=k*3?3:moves<=k*4.5?2:1);level++;ls.set('tb-level',level)}
+  tone(660,.1);setTimeout(()=>tone(990,.2),120);show('¡Ordenado!',`+${r} monedas · ${moves} movimientos`,mode==='day'?'Ir al mapa':'Siguiente',()=>{if(mode==='day'){mode='lv';LH.show()}else start()})}
+function show(t,p,b,fn){$('oT').textContent=t;$('oP').textContent=p;$('oB').textContent=b;$('ov').classList.add('show');$('oB').onclick=()=>{$('ov').classList.remove('show');fn()}}
+function setMode(m){mode=m;$('mDay').classList.toggle('on',m==='day');$('mLv').classList.toggle('on',m==='lv');start()}
+$('tshX').onclick=()=>$('tsh').classList.remove('show');$('tsh').onclick=e=>{if(e.target.id==='tsh')$('tsh').classList.remove('show')};
+addEventListener('message',e=>{if(e.data&&e.data.t==='themes'){themesUI();$('tsh').classList.add('show')}});
+$('mDay').onclick=()=>setMode('day');$('mLv').onclick=()=>setMode('lv');$('bR').onclick=start;
+$('bU').onclick=()=>{if(hist.length){tubes=JSON.parse(hist.pop());moves--;sel=null;render()}};
+$('bX').onclick=()=>{if(extra)return;if(coins<30){show('Tubo extra','Necesitas 30 monedas.','Vale',()=>{});return}coins-=30;ls.set('mj-coins',coins);tubes.push([]);extra=true;render()};
+let ac;function tone(f,d,type='sine'){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(.1,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+themesUI();
+const LH=Kit.levelHome({id:'tubo',name:'Tubo Diario',map:'nubes',color:'linear-gradient(135deg,#6C8BFF,#3E5BD8)',tagline:'Ordena las bolas por colores. Solo caen sobre su mismo color o en un tubo vacío.',
+  art:'<svg viewBox="0 0 70 70"><path d="M14 8 v40 a8 8 0 0 0 16 0 v-40" fill="rgba(255,255,255,.85)"/><path d="M40 8 v40 a8 8 0 0 0 16 0 v-40" fill="rgba(255,255,255,.85)"/><circle cx="22" cy="46" r="6" fill="#E5484D"/><circle cx="22" cy="32" r="6" fill="#F5B82E"/><circle cx="48" cy="46" r="6" fill="#F5B82E"/></svg>',
+  onPlay:n=>{level=n;mode='lv';Kit.tutorial('tubo','Tubo Diario',[["🧪","Ordena por colores","Toca un tubo y luego otro para pasar la bola de arriba.","🔴 ➡ 🧪"],["🎯","Solo sobre su color","Una bola cae sobre otra de su mismo color o en un tubo vacío.",null],["✨","Tubos completos","Gana cuando cada tubo tenga un solo color. Hay un tubo extra si te atascas.",null]],start)}});
+$('bMap').onclick=()=>LH.show();addEventListener('pointerdown',()=>Kit.ambient('calma'),{once:true});
+if(location.hash==='#levels'||!location.hash){level=LH.cur();mode='lv';LH.show()}else start();
+})();
+</script>
+</body>
+</html>

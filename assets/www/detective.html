@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Detective</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const PEOPLE = [['👵', 'Rosa'], ['👨‍🍳', 'Leo'], ['👩‍🎤', 'Mia'], ['🧔', 'Tom'], ['👧', 'Zoe']];
+const SETS = {
+  mansion: { rooms: [['🍳', 'cocina'], ['🛋️', 'salón'], ['🌳', 'jardín'], ['📚', 'biblioteca'], ['🛁', 'baño']], objs: [['🔑', 'la llave'], ['🔍', 'la lupa'], ['🕯️', 'la vela'], ['💎', 'la joya'], ['☂️', 'el paraguas']], bg: '#2B2F5E', missing: '🎂 el pastel' },
+  barco: { rooms: [['⚓', 'cubierta'], ['🛏️', 'camarote'], ['🍽️', 'comedor'], ['🧭', 'puente'], ['🏊', 'piscina']], objs: [['🗺️', 'el mapa'], ['🔭', 'el catalejo'], ['🎩', 'el sombrero'], ['🪙', 'la moneda'], ['📯', 'la trompeta']], bg: '#0E7490', missing: '🦜 el loro' },
+  espacio: { rooms: [['🚀', 'cabina'], ['🔬', 'laboratorio'], ['🌱', 'invernadero'], ['🛰️', 'antena'], ['🍕', 'cocina espacial']], objs: [['🧪', 'el tubo'], ['🔋', 'la batería'], ['📡', 'el radar'], ['🧲', 'el imán'], ['🪐', 'la maqueta']], bg: '#1D2340', missing: '👽 la mascota' } };
+let ctx, k, sol, clues, guess, lives, mistakes, S;
+
+function perms(n) { const out = [], a = [...Array(n).keys()]; (function p(i) { if (i === n) { out.push(a.slice()); return; } for (let j = i; j < n; j++) { [a[i], a[j]] = [a[j], a[i]]; p(i + 1); [a[i], a[j]] = [a[j], a[i]]; } })(0); return out; }
+// pista: {t:'pr'|'nr'|'po'|'no'|'ro'|'nro', p, r, o}
+function holds(c, R, O) {
+  if (c.t === 'pr') return R[c.p] === c.r; if (c.t === 'nr') return R[c.p] !== c.r;
+  if (c.t === 'po') return O[c.p] === c.o; if (c.t === 'no') return O[c.p] !== c.o;
+  const who = R.indexOf(c.r); if (c.t === 'ro') return O[who] === c.o; return O[who] !== c.o; }
+function count(cl, P) { let n = 0; for (const R of P) for (const O of P) if (cl.every(c => holds(c, R, O))) { n++; if (n > 1) return n; } return n; }
+function generate(r, diff) {
+  k = diff <= 5 ? 3 : diff <= 18 ? 4 : 5; const P = perms(k);
+  sol = { R: Kit.shuffle([...Array(k).keys()], r), O: Kit.shuffle([...Array(k).keys()], r) };
+  const pool = [];
+  for (let p = 0; p < k; p++) for (let x = 0; x < k; x++) {
+    pool.push(sol.R[p] === x ? { t: 'pr', p, r: x } : { t: 'nr', p, r: x });
+    pool.push(sol.O[p] === x ? { t: 'po', p, o: x } : { t: 'no', p, o: x }); }
+  for (let rr = 0; rr < k; rr++) for (let o = 0; o < k; o++) { const who = sol.R.indexOf(rr); pool.push(sol.O[who] === o ? { t: 'ro', r: rr, o } : { t: 'nro', r: rr, o }); }
+  // a más dificultad, menos pistas directas
+  const weight = c => (c.t === 'pr' || c.t === 'po') ? (diff > 10 ? .25 : .6) : (c.t === 'ro' ? 1.2 : 1);
+  let cl = [];
+  const cand = Kit.shuffle(pool.slice(), r).sort((a, b) => weight(b) * r() - weight(a) * r());
+  for (const c of cand) { cl.push(c); if (count(cl, P) === 1) break; }
+  for (let i = cl.length - 1; i >= 0; i--) { const t = cl.filter((_, j) => j !== i); if (count(t, P) === 1) cl = t; } // quitar pistas sobrantes
+  return Kit.shuffle(cl, r);
+}
+const nm = p => `<b>${PEOPLE[p][0]} ${PEOPLE[p][1]}</b>`;
+const rm = x => `${S.rooms[x][0]} ${S.rooms[x][1]}`, ob = x => `${S.objs[x][0]} ${S.objs[x][1]}`;
+function txt(c) { switch (c.t) {
+  case 'pr': return `${nm(c.p)} estaba en ${rm(c.r)}.`; case 'nr': return `${nm(c.p)} no pisó ${rm(c.r)}.`;
+  case 'po': return `${nm(c.p)} llevaba ${ob(c.o)}.`; case 'no': return `${nm(c.p)} no tenía ${ob(c.o)}.`;
+  case 'ro': return `Quien estaba en ${rm(c.r)} tenía ${ob(c.o)}.`; default: return `Quien estaba en ${rm(c.r)} no tenía ${ob(c.o)}.`; } }
+
+function start(c) {
+  ctx = c; S = SETS[Kit.theme()] || SETS.mansion; clues = generate(c.r, c.diff); lives = 3; mistakes = 0;
+  guess = Array.from({ length: k }, () => ({ r: -1, o: -1 }));
+  const thief = Math.floor(c.r() * k);
+  c.stage.style.alignItems = 'stretch';
+  c.stage.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;width:100%;overflow:auto">
+    <div style="background:${S.bg};color:#fff;border-radius:18px;padding:12px 14px;font-weight:800;font-size:14px">🕵️ Ha desaparecido ${S.missing}. Descubre dónde estaba cada persona y qué llevaba.</div>
+    <div id="cl" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div id="tb" style="background:#fff;border-radius:18px;padding:8px;border:1px solid var(--line)"></div></div>`;
+  c.stage.querySelector('#cl').innerHTML = clues.map((x, i) => `<button data-i="${i}" style="text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px 12px;font-weight:700;font-size:14px;line-height:1.3">🔎 ${txt(x)}</button>`).join('');
+  c.stage.querySelectorAll('#cl button').forEach(b => b.onclick = () => { b.style.opacity = b.style.opacity === '0.4' ? '1' : '0.4'; b.style.textDecoration = b.style.opacity === '0.4' ? 'line-through' : 'none'; });
+  c.tools([{ t: '✔ Comprobar', fn: check }, { t: '💡 Pista · 30', fn: hint }]);
+  draw(); c.info('❤'.repeat(lives));
+}
+function draw() {
+  const tb = ctx.stage.querySelector('#tb');
+  tb.innerHTML = `<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px;font-size:12px;font-weight:900;color:var(--muted);padding:0 4px 4px"><span>Persona</span><span>Dónde</span><span>Qué llevaba</span></div>` +
+    guess.map((g, p) => `<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px;align-items:center;padding:4px 0;border-top:1px solid var(--line)">
+      <span style="font-weight:800;font-size:14px">${PEOPLE[p][0]} ${PEOPLE[p][1]}</span>
+      <button data-p="${p}" data-a="r" style="background:#EEF1FB;border-radius:12px;padding:8px 4px;font-size:20px">${g.r < 0 ? '❔' : S.rooms[g.r][0]}</button>
+      <button data-p="${p}" data-a="o" style="background:#EEF1FB;border-radius:12px;padding:8px 4px;font-size:20px">${g.o < 0 ? '❔' : S.objs[g.o][0]}</button></div>`).join('') +
+    `<div style="font-size:11px;color:var(--muted);font-weight:700;padding:6px 4px 0">Toca ❔ para ir cambiando. Toca una pista para tacharla.</div>`;
+  tb.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const g = guess[+b.dataset.p], a = b.dataset.a; g[a] = g[a] + 1 >= k ? -1 : g[a] + 1; Kit.tone(500, .04, 'triangle'); draw(); });
+}
+function check() {
+  if (guess.some(g => g.r < 0 || g.o < 0)) { Kit.toast('Completa toda la tabla'); return; }
+  const ok = guess.filter((g, p) => g.r === sol.R[p] && g.o === sol.O[p]).length;
+  if (ok === k) { const w = sol.R.findIndex((_, p) => p === 0); return ctx.win(mistakes === 0 ? 3 : mistakes === 1 ? 2 : 1, { title: '¡Caso resuelto!', text: `Encontrado ${S.missing}. ${mistakes ? '' : 'Sin un solo error.'}` }); }
+  mistakes++; lives--; ctx.info('❤'.repeat(lives)); Kit.tone(150, .2, 'sawtooth'); Kit.buzz([40, 40, 40]);
+  if (lives <= 0) return ctx.lose('Te has quedado sin vidas. Relee las pistas con calma.');
+  Kit.toast(`${ok} de ${k} personas bien. Revisa las demás.`);
+}
+function hint() { if (Kit.coins() < 30) { Kit.toast('Necesitas 30 monedas'); return; }
+  const p = guess.findIndex((g, i) => g.r !== sol.R[i] || g.o !== sol.O[i]); if (p < 0) return;
+  Kit.addCoins(-30); guess[p] = { r: sol.R[p], o: sol.O[p] }; mistakes++; draw(); Kit.toast(`${PEOPLE[p][1]} desvelado`); }
+
+Kit.game({ tutorial: [["🕵️","Ha desaparecido algo","Cada caso tiene varias personas, lugares y objetos. Tu misión: descubrir dónde estaba cada uno y qué llevaba.","👵 🍳 🔑"],["🔎","Lee las pistas","Cada pista descarta o confirma algo. Toca una pista para tacharla cuando ya la hayas usado.",null],["❔","Rellena la tabla","Toca ❔ para ir cambiando de lugar y de objeto. Cuando esté completa, pulsa Comprobar.",null],["❤","Tres vidas","Cada comprobación fallida resta una vida. Solo hay una solución posible: ¡deduce, no adivines!",null]], mood: 'misterio', id: 'detective', name: 'Detective', map: 'torre', color: 'linear-gradient(135deg,#4B5A82,#1F2A4A)', levels: 60,
+  tagline: 'Lee las pistas y deduce dónde estaba cada uno y qué llevaba.',
+  art: '<svg viewBox="0 0 70 70"><circle cx="30" cy="30" r="16" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="6"/><path d="M42 42 L58 58" stroke="#fff" stroke-width="9" stroke-linecap="round"/></svg>',
+  themes: [{ id: 'mansion', name: 'Mansión', pv: '🏚️', bg: '#E7E3F7' }, { id: 'barco', name: 'Crucero', cost: 150, pv: '🚢', bg: '#D7F1FA' }, { id: 'espacio', name: 'Estación espacial', cost: 200, pv: '🛰️', bg: '#E2E6FF' }],
+  start });
+})();
+</script></body></html>

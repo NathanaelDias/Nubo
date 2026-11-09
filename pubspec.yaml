@@ -1,0 +1,30 @@
+name: nubo
+description: "Nubo · juegos para pensar"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Navegador interno + servidor local: los juegos van dentro de la app y funcionan sin conexión
+  flutter_inappwebview: ^6.1.5
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/www/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#5C7CFA"
+  adaptive_icon_foreground: "assets/icon/foreground.png"
+  min_sdk_android: 21

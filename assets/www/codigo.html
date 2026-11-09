@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Código secreto</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const COL = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7', '#F07A2B', '#FF6FA8'];
+const SYM = { bolas: ['●', '▲', '■', '◆', '★', '♥', '✚'], frutas: ['🍎', '🫐', '🍋', '🍏', '🍇', '🍊', '🍑'], gemas: ['💎', '🔷', '🔶', '💚', '💜', '🧡', '🩷'] };
+let ctx, len, nCol, maxT, code, rows, cur, phase, p2, tries2;
+
+function setup(diff) { len = diff <= 3 ? 3 : diff <= 14 ? 4 : 5; nCol = Math.min(4 + Math.floor(diff / 5), 7); maxT = diff <= 10 ? 10 : 8; }
+function start(c) {
+  ctx = c; setup(c.diff); rows = []; cur = [];
+  if (c.mode === 'duo') { p2 = { turn: 1, score: [] }; setup(8); return newCode(); }
+  p2 = null; code = Array.from({ length: len }, () => Math.floor(c.r() * nCol)); phase = 'guess'; render();
+}
+function newCode() { rows = []; cur = []; phase = 'set';
+  ctx.stage.innerHTML = `<div style="text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center;width:100%">
+    <div style="font-family:var(--display);font-size:24px">Jugador ${p2.turn}: crea el código</div>
+    <div style="color:var(--muted);font-weight:700">Que el Jugador ${p2.turn === 1 ? 2 : 1} no mire. Elige ${len} símbolos.</div>
+    <div id="slots" style="display:flex;gap:8px"></div><div id="pal" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div></div>`;
+  drawPal(); drawSlots(); ctx.tools([{ t: '↶ Borrar', fn: () => { cur.pop(); drawSlots(); } }, { t: '🔒 Listo, pasar el móvil', fn: () => { if (cur.length < len) return Kit.toast(`Faltan ${len - cur.length}`); code = cur.slice(); cur = []; phase = 'guess'; render(); } }]); }
+const peg = (i, big) => { const s = SYM[Kit.theme()] || SYM.bolas, emoji = Kit.theme() !== 'bolas' && Kit.theme();
+  return `<span style="width:${big ? 44 : 30}px;height:${big ? 44 : 30}px;border-radius:50%;display:inline-grid;place-items:center;background:${i == null ? '#EEF1FB' : emoji ? '#fff' : COL[i]};color:#fff;font-size:${big ? (emoji ? 26 : 18) : (emoji ? 18 : 13)}px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15);border:2px solid ${i == null ? 'var(--line)' : 'transparent'}">${i == null ? '' : s[i]}</span>`; };
+function drawPal() { const p = ctx.stage.querySelector('#pal'); p.innerHTML = Array.from({ length: nCol }, (_, i) => `<button data-c="${i}">${peg(i, 1)}</button>`).join('');
+  p.querySelectorAll('button').forEach(b => b.onclick = () => { if (cur.length < len) { cur.push(+b.dataset.c); Kit.tone(400 + cur.length * 80, .05, 'triangle'); phase === 'set' ? drawSlots() : drawRows(); } }); }
+function drawSlots() { ctx.stage.querySelector('#slots').innerHTML = Array.from({ length: len }, (_, i) => peg(phase === 'set' && cur[i] != null ? cur[i] : null, 1)).join(''); }
+function score(g) { let ex = 0, co = 0; const a = [], b = []; g.forEach((x, i) => { if (x === code[i]) ex++; else { a.push(x); b.push(code[i]); } }); a.forEach(x => { const j = b.indexOf(x); if (j >= 0) { co++; b.splice(j, 1); } }); return { ex, co }; }
+function render() {
+  ctx.stage.style.alignItems = 'stretch';
+  ctx.stage.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;width:100%;align-items:center">
+    ${p2 ? `<div style="font-weight:900;color:var(--muted)">Adivina el Jugador ${p2.turn === 1 ? 2 : 1}</div>` : ''}
+    <div id="rows" style="display:flex;flex-direction:column;gap:5px;width:min(100%,360px);overflow:auto;max-height:52vh"></div>
+    <div style="font-size:12px;color:var(--muted);font-weight:800">● símbolo y sitio correctos · ○ símbolo correcto en otro sitio</div>
+    <div id="pal" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div></div>`;
+  drawPal(); drawRows();
+  ctx.tools([{ t: '↶ Borrar', fn: () => { cur.pop(); drawRows(); } }, { t: '✔ Probar', fn: tryIt }]);
+}
+function drawRows() { const el = ctx.stage.querySelector('#rows'); if (!el) return;
+  el.innerHTML = rows.map((r, i) => `<div style="display:flex;align-items:center;gap:6px;background:#fff;border-radius:14px;padding:6px 10px;border:1px solid var(--line)"><b style="width:18px;color:var(--muted);font-size:12px">${i + 1}</b>${r.g.map(x => peg(x)).join('')}<span style="margin-left:auto;font-size:15px;letter-spacing:1px;color:#1D2340">${'●'.repeat(r.s.ex)}<span style="color:#9AA3C9">${'○'.repeat(r.s.co)}</span></span></div>`).join('') +
+    `<div style="display:flex;align-items:center;gap:6px;background:#E7ECFF;border-radius:14px;padding:6px 10px;border:2px solid var(--accent)"><b style="width:18px;color:var(--accent);font-size:12px">${rows.length + 1}</b>${Array.from({ length: len }, (_, i) => peg(cur[i])).join('')}<span style="margin-left:auto;font-size:12px;font-weight:900;color:var(--muted)">${maxT - rows.length} intentos</span></div>`;
+  el.scrollTop = el.scrollHeight; ctx.info(`${len} símbolos · ${nCol} colores`); }
+function tryIt() { if (cur.length < len) return Kit.toast(`Faltan ${len - cur.length}`);
+  const s = score(cur); rows.push({ g: cur.slice(), s }); cur = []; Kit.tone(s.ex === len ? 990 : 300 + s.ex * 120, .12, 'triangle'); drawRows();
+  if (s.ex === len) return done(true); if (rows.length >= maxT) return done(false); }
+function done(ok) {
+  if (p2) { p2.score[p2.turn - 1] = ok ? rows.length : maxT + 1;
+    if (p2.turn === 1) { Kit.dialog({ title: ok ? `¡Descifrado en ${rows.length}!` : 'No lo ha descifrado', text: 'Ahora cambiad: el Jugador 2 crea el código.', buttons: [{ t: 'Seguir', pri: 1, fn: () => { p2.turn = 2; newCode(); } }] }); return; }
+    const [a, b] = p2.score; Kit.confetti(); return ctx.result(a === b ? '¡Empate!' : a > b ? '¡Gana el Jugador 1!' : '¡Gana el Jugador 2!', `J2 lo descifró en ${a > maxT ? '—' : a} · J1 en ${b > maxT ? '—' : b} intentos. Menos intentos gana.`); }
+  if (!ok) return ctx.lose('Era: ' + code.map(x => (SYM[Kit.theme()] || SYM.bolas)[x]).join(' '));
+  ctx.win(rows.length <= Math.ceil(maxT * .45) ? 3 : rows.length <= Math.ceil(maxT * .7) ? 2 : 1, { text: `Descifrado en ${rows.length} intentos` }); }
+
+Kit.game({ tutorial: [["🔐","Hay un código secreto","Una combinación de símbolos. Elige símbolos abajo y pulsa Probar.","● ▲ ■ ?"],["●","Lee las pistas","● = símbolo en su sitio. ○ = símbolo correcto, pero en otro sitio.",null],["👥","Solo o a dos","En el modo de 2 jugadores, uno crea el código y el otro lo descifra. Luego se cambian.",null]], mood: 'espacio', id: 'codigo', name: 'Código secreto', map: 'escalera', color: 'linear-gradient(135deg,#5EE0B5,#14936B)', levels: 60,
+  tagline: 'Descubre la combinación secreta usando las pistas de cada intento.',
+  modes: [{ id: 'solo', name: '1 jugador' }, { id: 'duo', name: '2 jugadores' }],
+  art: '<svg viewBox="0 0 70 70"><circle cx="14" cy="26" r="6" fill="#fff"/><circle cx="28" cy="26" r="6" fill="#F5B82E"/><circle cx="42" cy="26" r="6" fill="#fff"/><circle cx="56" cy="26" r="6" fill="#E5484D"/><text x="35" y="54" font-size="16" font-weight="900" text-anchor="middle" fill="#fff">? ? ? ?</text></svg>',
+  themes: [{ id: 'bolas', name: 'Símbolos', pv: '●▲', bg: '#DFF7EE' }, { id: 'frutas', name: 'Frutas', cost: 100, pv: '🍎', bg: '#FFF0D6' }, { id: 'gemas', name: 'Gemas', cost: 150, pv: '💎', bg: '#E2E6FF' }],
+  onTheme: () => ctx && phase === 'guess' && render(), start });
+})();
+</script></body></html>

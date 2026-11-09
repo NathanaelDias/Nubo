@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Tornillos</title></head>
+<body><script src="kit.js"></script>
+<script>
+(() => {
+const COL = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7', '#F07A2B', '#FF6FA8'];
+const MAT = { madera: ['#E9B87A', '#D9A060', '#C98B4A', '#B97A3E'], metal: ['#C9D1E3', '#AEB8CF', '#97A3BE', '#808DAA'], cristal: ['rgba(125,211,252,.55)', 'rgba(167,139,250,.55)', 'rgba(110,231,183,.55)', 'rgba(251,191,36,.5)'] };
+let ctx, plates, screws, queue, boxes, hold, HOLD, used, U, bd;
+
+function generate(r, n) {
+  const W = 6, H = 8, layers = Math.min(2 + Math.floor(n / 6), 5), ncol = Math.min(3 + Math.floor(n / 4), 7);
+  plates = []; screws = [];
+  for (let L = 0; L < layers; L++) for (let k = 0; k < 2 + Math.floor(r() * 2); k++) {
+    const hor = r() < .5, w = hor ? 2 + Math.floor(r() * 3) : 1, h = hor ? 1 : 2 + Math.floor(r() * 3);
+    const x = Math.floor(r() * (W - w + 1)), y = Math.floor(r() * (H - h + 1)), p = { id: plates.length, L, x, y, w, h, alive: true, mat: Math.floor(r() * 4) };
+    plates.push(p);
+    const pts = hor ? [[x, y], [x + w - 1, y]] : [[x, y], [x, y + h - 1]]; if (w * h >= 4 && r() < .5) pts.push(hor ? [x + Math.floor(w / 2), y] : [x, y + Math.floor(h / 2)]);
+    pts.forEach(([sx, sy]) => screws.push({ id: screws.length, p: p.id, x: sx + .5, y: sy + .5, alive: true })); }
+  // orden válido: siempre se quita un tornillo libre (ninguna placa superior lo tapa)
+  const alive = new Set(screws.map(s => s.id)), pAlive = new Set(plates.map(p => p.id)), ord = [];
+  const freeIn = s => !plates.some(q => pAlive.has(q.id) && q.L > plates[s.p].L && s.x > q.x && s.x < q.x + q.w && s.y > q.y && s.y < q.y + q.h);
+  while (alive.size) { const fr = screws.filter(s => alive.has(s.id) && freeIn(s)); const s = fr[Math.floor(r() * fr.length)]; ord.push(s); alive.delete(s.id);
+    if (!screws.some(o => alive.has(o.id) && o.p === s.p)) pAlive.delete(s.p); }
+  const extra = ord.length % 3; ord.slice(ord.length - extra).forEach(s => { s.alive = false; }); const real = ord.slice(0, ord.length - extra);
+  plates.forEach(p => { if (!screws.some(s => s.alive && s.p === p.id)) p.alive = false; });
+  queue = [];
+  for (let i = 0; i < real.length; i += 6) { const ch = real.slice(i, i + 6), cs = []; for (let k = 0; k < ch.length / 3; k++) { const c = Math.floor(r() * ncol); cs.push(c, c, c); queue.push(c); }
+    Kit.shuffle(cs, r).forEach((c, j) => ch[j].c = c); }
+}
+const free = s => !plates.some(q => q.alive && q.L > plates[s.p].L && s.x > q.x && s.x < q.x + q.w && s.y > q.y && s.y < q.y + q.h);
+
+function start(c) {
+  ctx = c; generate(c.r, c.diff); boxes = [{ c: queue.shift(), n: 0 }, { c: queue.shift(), n: 0 }]; hold = []; HOLD = 5; used = 0;
+  c.stage.style.flexDirection = 'column'; c.stage.style.gap = '10px';
+  c.stage.innerHTML = `<div id="bx" style="display:flex;gap:10px;justify-content:center"></div><div id="hd" style="display:flex;gap:6px;justify-content:center"></div><div id="bd" style="position:relative;border-radius:18px;background:repeating-linear-gradient(45deg,#3B3F4C 0 10px,#363A46 10px 20px);box-shadow:inset 0 0 0 4px #2B2F3A"></div>`;
+  bd = c.stage.querySelector('#bd'); U = Math.min((Math.min(c.stage.clientWidth, 380) - 20) / 6, (c.stage.clientHeight - 170) / 8); bd.style.width = (6 * U + 16) + 'px'; bd.style.height = (8 * U + 16) + 'px';
+  c.tools([{ t: '🧲 Imán · 30', fn: magnet }, { t: '+1 hueco · 40', fn: () => { if (HOLD > 5) return; if (Kit.coins() < 40) return Kit.toast('Necesitas 40 monedas'); Kit.addCoins(-40); HOLD = 6; used++; draw(); } }]);
+  draw();
+}
+function screwSVG(c, sz) { return `<svg viewBox="0 0 30 30" width="${sz}" height="${sz}"><circle cx="15" cy="15" r="13" fill="${c}" stroke="rgba(0,0,0,.35)" stroke-width="2"/><circle cx="12" cy="11" r="4" fill="rgba(255,255,255,.4)"/><path d="M9 15h12M15 9v12" stroke="rgba(0,0,0,.45)" stroke-width="3" stroke-linecap="round"/></svg>`; }
+function draw() {
+  const M = MAT[Kit.theme()] || MAT.madera;
+  ctx.stage.querySelector('#bx').innerHTML = boxes.map(b => b ? `<div style="background:${COL[b.c]};border-radius:14px;padding:8px 10px;display:flex;gap:6px;box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)">${[0, 1, 2].map(i => i < b.n ? screwSVG(COL[b.c], 26) : '<i style="width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.25);display:inline-block"></i>').join('')}</div>` : '<div style="width:110px"></div>').join('') + `<div style="align-self:center;font-weight:900;color:var(--muted);font-size:12px">+${queue.length}</div>`;
+  ctx.stage.querySelector('#hd').innerHTML = Array.from({ length: HOLD }, (_, i) => `<div style="width:34px;height:34px;border-radius:50%;background:#EEF1FB;border:2px dashed ${hold.length >= HOLD - 1 ? 'var(--bad)' : 'var(--line)'};display:grid;place-items:center">${hold[i] ? screwSVG(COL[hold[i].c], 26) : ''}</div>`).join('');
+  bd.innerHTML = '';
+  plates.filter(p => p.alive).sort((a, b) => a.L - b.L).forEach(p => bd.appendChild(Kit.h(`<div style="position:absolute;left:${8 + p.x * U + 3}px;top:${8 + p.y * U + 3}px;width:${p.w * U - 6}px;height:${p.h * U - 6}px;border-radius:${U * .35}px;background:${M[p.mat]};box-shadow:0 ${3 + p.L * 2}px ${6 + p.L * 3}px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.4);z-index:${p.L * 2 + 1};${Kit.theme() === 'madera' ? 'background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 3px,transparent 3px 9px)' : ''}"></div>`)));
+  screws.filter(s => s.alive).forEach(s => { const f = free(s), e = Kit.h(`<button style="position:absolute;left:${8 + s.x * U - U * .3}px;top:${8 + s.y * U - U * .3}px;z-index:${plates[s.p].L * 2 + 2};filter:${f ? 'none' : 'brightness(.45) grayscale(.6)'}">${screwSVG(COL[s.c], U * .6)}</button>`);
+    e.onclick = () => tap(s, e, f); bd.appendChild(e); });
+  ctx.info(`${screws.filter(s => s.alive).length} tornillos`);
+}
+function tap(s, e, f) {
+  if (!f) { e.animate([{ transform: 'rotate(-20deg)' }, { transform: 'rotate(20deg)' }, { transform: 'none' }], { duration: 200 }); Kit.tone(170, .08, 'square', .04); return; }
+  const bi = boxes.findIndex(b => b && b.c === s.c && b.n < 3);
+  if (bi < 0 && hold.length >= HOLD) return;
+  s.alive = false; e.animate([{ transform: 'rotate(0) scale(1)' }, { transform: 'rotate(720deg) scale(1.3)', opacity: 0 }], { duration: 300 }); Kit.tone(500, .05, 'triangle'); Kit.tone(900, .08, 'sine');
+  if (bi >= 0) boxes[bi].n++; else hold.push(s);
+  if (!screws.some(o => o.alive && o.p === s.p)) { plates[s.p].alive = false; Kit.tone(220, .25, 'triangle'); }
+  setTimeout(settle, 260);
+}
+function settle() {
+  let changed = true;
+  while (changed) { changed = false;
+    boxes.forEach((b, i) => { if (b && b.n >= 3) { Kit.tone(880, .12); boxes[i] = queue.length ? { c: queue.shift(), n: 0 } : null; changed = true; } });
+    for (const b of boxes) { if (!b) continue; for (let k = 0; k < hold.length && b.n < 3; k++) if (hold[k].c === b.c) { hold.splice(k, 1); b.n++; k--; changed = true; } } }
+  draw();
+  if (!screws.some(s => s.alive) && !hold.length) return ctx.win(used === 0 ? 3 : used === 1 ? 2 : 1, { text: 'Todas las placas han caído' });
+  if (hold.length >= HOLD && !screws.some(s => s.alive && free(s) && boxes.some(b => b && b.c === s.c && b.n < 3))) setTimeout(() => ctx.lose('La caja de reserva se ha llenado.'), 300);
+}
+function magnet() { if (Kit.coins() < 30) return Kit.toast('Necesitas 30 monedas'); const b = boxes.find(b => b && b.n < 3); if (!b) return; Kit.addCoins(-30); used++;
+  screws.filter(s => s.alive && s.c === b.c).slice(0, 3 - b.n).forEach(s => { s.alive = false; b.n++; if (!screws.some(o => o.alive && o.p === s.p)) plates[s.p].alive = false; }); settle(); }
+
+Kit.game({ id: 'tornillos', name: 'Tornillos', map: 'escalera', mood: 'alegre', color: 'linear-gradient(135deg,#B9C0DE,#5C6378)', levels: 60,
+  tagline: 'Desenrosca los tornillos libres y guárdalos en la caja de su color. Cuando una placa se queda sin tornillos, cae.',
+  tutorial: [['🔩', 'Toca un tornillo libre', 'Los oscuros están tapados por una placa de encima.', '🔩 ➡ 📦'], ['📦', 'Cajas de colores', 'Cada caja guarda 3 tornillos de su color. Si no hay caja para ese color, va a la reserva.', null], ['⚠️', 'No llenes la reserva', 'Tienes 5 huecos. Cuando llega la caja del color, los tornillos de la reserva saltan solos.', null]],
+  art: '<svg viewBox="0 0 70 70"><rect x="8" y="18" width="54" height="16" rx="6" fill="#E9B87A"/><rect x="20" y="30" width="16" height="32" rx="6" fill="#D9A060"/><circle cx="16" cy="26" r="6" fill="#E5484D"/><circle cx="54" cy="26" r="6" fill="#3E7BFA"/><circle cx="28" cy="54" r="6" fill="#F5B82E"/></svg>',
+  themes: [{ id: 'madera', name: 'Madera', pv: '🪵', bg: '#F3DDBF' }, { id: 'metal', name: 'Metal', cost: 120, pv: '⚙️', bg: '#E2E6F0' }, { id: 'cristal', name: 'Cristal', cost: 150, pv: '💎', bg: '#E0F2FE' }],
+  onTheme: () => ctx && draw(), start });
+})();
+</script></body></html>
