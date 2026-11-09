@@ -19,6 +19,8 @@ workflows:
         script: bash tool/prepare_android.sh
       - name: Dependencias
         script: flutter pub get
+      - name: Arreglar plugins (AGP 9)
+        script: bash tool/fix_plugins.sh
       - name: Icono de la app
         script: dart run flutter_launcher_icons
       - name: Compilar APK
