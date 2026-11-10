@@ -263,7 +263,7 @@ nav button[data-s=prof].on span{background:linear-gradient(145deg,#FF8FA3,#E5484
 .player{position:fixed;inset:0;background:var(--bg);display:none;z-index:10;flex-direction:column}
 .player.show{display:flex;animation:pin .34s cubic-bezier(.2,.9,.3,1.08)}@keyframes pin{from{opacity:0;transform:scale(.93) translateY(18px)}}
 .player.closing{animation:pout .22s ease-in forwards;pointer-events:none}@keyframes pout{to{opacity:0;transform:scale(.95) translateY(14px)}}
-.pwrap{flex:1;position:relative;display:flex}
+.pwrap{position:absolute;inset:0;display:flex}
 body.playing>*:not(.player):not(script):not(.toast):not(.sheet):not(.k-ach):not(.k-toast):not(.k-fx):not(.k-ov){visibility:hidden}body.playing *{animation-play-state:paused}body.playing .player *{animation-play-state:running}
 .pload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2;transition:opacity .28s ease;color:#fff;font-family:var(--display);font-size:22px}
 .pload.hide{opacity:0;pointer-events:none}
@@ -271,10 +271,22 @@ body.playing>*:not(.player):not(script):not(.toast):not(.sheet):not(.k-ach):not(
 .pload .icon svg{width:78%}@keyframes plb{from{transform:translateY(0) scale(1)}to{transform:translateY(-10px) scale(1.04)}}
 .pload .dots{display:flex;gap:6px}.pload .dots i{width:8px;height:8px;border-radius:50%;background:#fff;opacity:.5;animation:pld .9s infinite}.pload .dots i:nth-child(2){animation-delay:.15s}.pload .dots i:nth-child(3){animation-delay:.3s}
 @keyframes pld{50%{opacity:1;transform:translateY(-4px)}}
-.pbar{flex:none;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;background:var(--fg);color:#fff}
-.pbar .back{background:rgba(255,255,255,.15);color:#fff;border-radius:999px;padding:7px 14px;font-weight:900;font-size:14px}
-.pbar b{font-family:var(--display);font-weight:400;font-size:18px;flex:1}
-.pbar .pill{background:rgba(255,255,255,.15);color:#fff;box-shadow:none}
+.pbar{position:absolute;top:0;left:0;right:0;z-index:3;height:56px;display:flex;align-items:center;gap:8px;padding:8px 10px;pointer-events:none}
+.pbar>*{pointer-events:auto}
+.pbar .fl{height:40px;min-width:40px;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.88);color:var(--fg);
+  box-shadow:0 4px 14px rgba(29,35,64,.18),inset 0 -2px 0 rgba(29,35,64,.06);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-weight:900;font-size:15px;padding:0 10px;transition:transform .12s}
+.pbar .fl:active{transform:scale(.9)}
+.pbar .home svg{width:22px;height:22px}
+.pbar .pill{background:rgba(255,255,255,.88);color:var(--fg)}
+.pbar .ttl{position:relative;flex:0 1 auto;min-width:0;height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;
+  background:var(--gbg,var(--accent));color:#fff;box-shadow:0 4px 14px rgba(29,35,64,.2),inset 0 3px 0 rgba(255,255,255,.25);pointer-events:none;overflow:hidden;animation:tin .5s cubic-bezier(.3,1.6,.5,1) .15s both}
+.pbar .ttl b{font-family:var(--display);font-weight:400;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 0 rgba(0,0,0,.18)}
+.pbar .ttl b span{display:inline-block;animation:twave 4s ease-in-out infinite;animation-delay:calc(1s + var(--i)*.07s)}
+.pbar .ttl::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-120%);animation:tshine 4s ease-in-out 1.2s infinite}
+@keyframes tin{from{transform:translateX(-14px) scale(.6);opacity:0}}
+@keyframes twave{0%,12%,100%{transform:translateY(0)}5%{transform:translateY(-4px)}}
+@keyframes tshine{0%,60%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+.pbar .sp{flex:1}
 .player iframe{border:0;width:100%;flex:1;background:var(--bg)}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--fg);color:#fff;padding:10px 16px;border-radius:14px;font-weight:800;font-size:14px;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:86vw;text-align:center}
 .sheet{position:fixed;inset:0;background:rgba(29,35,64,.5);display:flex;align-items:flex-end;justify-content:center;z-index:15}
@@ -292,7 +304,7 @@ body.playing>*:not(.player):not(script):not(.toast):not(.sheet):not(.k-ach):not(
   <div class="logo"><svg viewBox="0 0 200 140" class="cloud"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D6E4FF"/></linearGradient></defs>
 <g fill="url(#cg)" stroke="#fff" stroke-width="2"><circle cx="62" cy="78" r="30"/><circle cx="100" cy="58" r="40"/><circle cx="140" cy="80" r="28"/><rect x="38" y="78" width="126" height="38" rx="19"/></g>
 <g class="eyes"><ellipse cx="86" cy="80" rx="6" ry="8" fill="#1D2340"/><ellipse cx="116" cy="80" rx="6" ry="8" fill="#1D2340"/><circle cx="88" cy="77" r="2.2" fill="#fff"/><circle cx="118" cy="77" r="2.2" fill="#fff"/></g>
-<path d="M92 96 q9 8 18 0" stroke="#1D2340" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="72" cy="94" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/><ellipse cx="130" cy="94" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/></svg><div class="word"><span style="--i:0">n</span><span style="--i:1">u</span><span style="--i:2">b</span><span style="--i:3">o</span></div><div class="tag">10 juegos · 1 nube</div></div>
+<path d="M92 96 q9 8 18 0" stroke="#1D2340" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="72" cy="94" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/><ellipse cx="130" cy="94" rx="7" ry="4" fill="#FF8FA3" opacity=".7"/></svg><div class="word"><span style="--i:0">n</span><span style="--i:1">u</span><span style="--i:2">b</span><span style="--i:3">o</span></div><div class="tag">Minijuegos para pensar</div></div>
   <button class="tap" id="tap">Toca para jugar</button>
 </div>
 
@@ -377,7 +389,7 @@ body.playing>*:not(.player):not(script):not(.toast):not(.sheet):not(.k-ach):not(
   <button data-s="prof" aria-label="Perfil"><span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c.8-4.5 4.3-7 8.5-7s7.7 2.5 8.5 7z"/></svg></span></button>
 </nav>
 
-<div class="player" id="player"><div class="pbar"><button class="back" id="back">‹ Nubo</button><b id="pname"></b><button class="back" id="thBtn" aria-label="Temas">🎨</button><span class="pill"><i class="coin"></i><span class="coins">0</span></span></div><div class="pwrap"><div class="pload" id="pload"></div><iframe id="frame" title="Juego"></iframe></div></div>
+<div class="player" id="player"><div class="pbar"><button class="fl home" id="back" aria-label="Inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10"/></svg></button><div class="ttl" id="pttl"><b id="pname"></b></div><span class="sp"></span><button class="fl" id="thBtn" aria-label="Temas">🎨</button><span class="fl"><i class="coin"></i><span class="coins">0</span></span></div><div class="pwrap"><div class="pload" id="pload"></div><iframe id="frame" title="Juego"></iframe></div></div>
 
 <script src="kit.js"></script>
 <script>
@@ -598,7 +610,7 @@ function passSheet(){const S=season(),t=tierNow(),nx=TIERS.find(x=>x.n>t),s=docu
    <button class="main">Ver el pase completo</button><button class="sec">Cerrar</button></div>`;
   s.onclick=e=>{if(e.target.classList.contains('main')){s.remove();go('pass')}else if(e.target===s||e.target.classList.contains('sec'))s.remove()};document.body.appendChild(s);fillBars(s)}
 $('fabDaily').onclick=dailySheet;$('fabPass').onclick=passSheet;
-function open(g,f){lobbyStop();nuboEvent('game_start',{game:g.id});$('pname').textContent=g.name;
+function open(g,f){lobbyStop();nuboEvent('game_start',{game:g.id});$('pname').innerHTML=[...g.name].map((c,i)=>`<span style="--i:${i}">${c===' '?'&nbsp;':c}</span>`).join('');$('pttl').style.setProperty('--gbg',g.bg);const tt=$('pttl');tt.style.animation='none';void tt.offsetWidth;tt.style.animation='';
   const pl=$('pload');pl.style.background=g.bg;pl.innerHTML=`<div class="icon" style="background:${g.bg}">${ICON[g.id]||''}</div>${g.name}<div class="dots"><i></i><i></i><i></i></div>`;pl.classList.remove('hide');plT=Date.now();
   $('player').classList.remove('closing');$('frame').src=f;$('player').classList.add('show');setTimeout(()=>{if($('player').classList.contains('show'))document.body.classList.add('playing')},360);$('fabs').classList.add('hide');sess={id:g.id,t:Date.now()};ls.set('mj-played-'+g.id,1)}
 $('thBtn').onclick=()=>{try{$('frame').contentWindow.postMessage({t:'themes'},'*')}catch(e){}};
@@ -826,7 +838,9 @@ let cur='home';
 function go(s){cur=s;$('fabs').classList.toggle('hide',s!=='home');document.querySelectorAll('.screen').forEach(e=>e.classList.toggle('on',e.id==='s-'+s));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));scrollTo(0,0);renderAll()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.s));
 function renderAll(){renderHome();setTimeout(checkHubAch,600);if(cur==='shop')renderShop();if(cur==='prof')renderProfile();if(cur==='pass')renderPass();if(cur==='admin')renderAdmin()}
-let plT=0;$('frame').addEventListener('load',()=>{if($('frame').src.startsWith('about:'))return;setTimeout(()=>$('pload').classList.add('hide'),Math.max(0,450-(Date.now()-plT)));const g=$('pname').textContent;const id=GAMES.find(q=>q.name===g);if(id)ls.set('mj-played-'+id.id,1);
+let plT=0;$('frame').addEventListener('load',()=>{if($('frame').src.startsWith('about:'))return;
+  try{const d=$('frame').contentDocument;if(d&&!d.getElementById('nubo-float')){d.documentElement.classList.add('nubo-float');const st=d.createElement('style');st.id='nubo-float';
+    st.textContent='html.nubo-float{--nt:56px}html.nubo-float body{padding-top:var(--nt)!important;box-sizing:border-box!important}html.nubo-float body>.k-scr{top:var(--nt)!important}html.nubo-float .k-lh{top:var(--nt)!important}';d.head.appendChild(st)}}catch(e){}setTimeout(()=>$('pload').classList.add('hide'),Math.max(0,450-(Date.now()-plT)));if(sess)ls.set('mj-played-'+sess.id,1);
   const t=setInterval(()=>{if(!$('player').classList.contains('show')){clearInterval(t);return}document.querySelectorAll('.coins').forEach(e=>e.textContent=coins())},1000)});
 renderAll();
 })();

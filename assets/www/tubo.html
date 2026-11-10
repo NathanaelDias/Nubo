@@ -27,7 +27,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   background:linear-gradient(90deg,rgba(255,255,255,.6) 0 12%,transparent 24% 72%,rgba(255,255,255,.28) 80%,transparent 90%)}
 .liq{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column-reverse}
 .lq{position:relative;flex:none;width:100%}
-.lq.top::before{content:"";position:absolute;left:-2px;right:-2px;top:-5px;height:10px;border-radius:50%;background:var(--c);filter:brightness(1.18)}
+.lq.surf::before{content:"";position:absolute;left:-2px;right:-2px;top:-5px;height:10px;border-radius:50%;background:var(--c);filter:brightness(1.18)}
 .lq.wave::before{animation:wave .5s ease-in-out infinite alternate}
 @keyframes wave{from{transform:translateY(-1px) scaleX(1) rotate(-3deg)}to{transform:translateY(1px) scaleX(.96) rotate(3deg)}}
 .tube.sel{transform:translateY(-22px)}.tube.sel .glass{border-color:var(--accent);--rim:var(--accent)}.tube.sel::before{background:var(--accent)}
@@ -147,7 +147,7 @@ function start(){const k=mode==='day'?6:Math.min(3+Math.floor(level/2),8),seed=m
 // La escena se construye una vez; luego solo se actualiza (así las transiciones son suaves)
 function unit(i){const g=els[i].querySelector('.glass');return (g.clientHeight-16)/CAP}
 function fill(i){const t=tubes[i],liq=els[i].querySelector('.liq'),u=unit(i);liq.innerHTML='';
-  let j=0;while(j<t.length){let k=j;while(k<t.length&&t[k]===t[j])k++;const d=document.createElement('div');d.className='lq'+(k===t.length?' top':'');
+  let j=0;while(j<t.length){let k=j;while(k<t.length&&t[k]===t[j])k++;const d=document.createElement('div');d.className='lq'+(k===t.length?' surf':'');
     d.style.cssText=`--c:${COLORS[t[j]]};height:${(k-j)*u}px;background:${liqBg(COLORS[t[j]])}`;d.dataset.c=t[j];liq.appendChild(d);j=k}}
 function build(){const st=$('stage');st.innerHTML='';els=tubes.map((t,i)=>{const e=document.createElement('div');e.className='tube';
   e.innerHTML='<div class="glass"><div class="liq"></div></div>';e.onclick=()=>tap(i);st.appendChild(e);return e});
@@ -159,8 +159,9 @@ function tap(i){if(busy){queue.push(i);if(queue.length>2)queue.shift();return}
   if(sel===null){if(tubes[i].length&&!full(tubes[i])){setSel(i);tone(420,.05);Kit.buzz&&Kit.buzz(8)}return}
   if(sel===i){setSel(null);tone(330,.04);return}
   const a=sel,m=canPour(tubes[a],tubes[i]);
-  if(!m){tone(150,.12,'sawtooth');els[i].classList.remove('no');void els[i].offsetWidth;els[i].classList.add('no');
-    if(tubes[i].length&&!full(tubes[i])){setSel(i)}return}
+  if(!m){// cambiar de tubo: si el tocado se puede elegir, simplemente pasa a ser el seleccionado
+    if(tubes[i].length&&!full(tubes[i])){setSel(i);tone(420,.05);Kit.buzz&&Kit.buzz(8);return}
+    tone(150,.12,'sawtooth');Kit.buzz&&Kit.buzz(30);els[i].classList.remove('no');void els[i].offsetWidth;els[i].classList.add('no');return}
   pour(a,i,m)}
 
 async function pour(a,b,m){busy=true;const A=els[a],B=els[b],ta=tubes[a],tb=tubes[b],c=ta[ta.length-1],col=COLORS[c];
@@ -179,8 +180,8 @@ async function pour(a,b,m){busy=true;const A=els[a],B=els[b],ta=tubes[a],tb=tube
   const surf0=tR.bottom-3-tb.length*u,surf1=surf0-m*u,T=170*m+120;
   const st=document.createElement('div');st.className='stream';st.style.cssText=`--c:${col};left:${mx}px;top:${my}px;height:0px;transition:height .1s ease-in`;document.body.appendChild(st);
   void st.offsetWidth;st.style.height=(surf0-my)+'px';
-  const srcTop=A.querySelector('.lq.top');let dst=B.querySelector('.lq.top');
-  if(!dst||+dst.dataset.c!==c){if(dst)dst.classList.remove('top');dst=document.createElement('div');dst.className='lq top';dst.dataset.c=c;
+  const srcTop=A.querySelector('.lq.surf');let dst=B.querySelector('.lq.surf');
+  if(!dst||+dst.dataset.c!==c){if(dst)dst.classList.remove('surf');dst=document.createElement('div');dst.className='lq surf';dst.dataset.c=c;
     dst.style.cssText=`--c:${col};height:0px;background:${liqBg(col)}`;B.querySelector('.liq').appendChild(dst)}
   dst.classList.add('wave');glug(m,tb.length);
   await sleep(80);
