@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Tubo Diario</title>
+<title>Vierte</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&display=swap">
 <style>
 :root{--bg:#EEF1FB;--fg:#1D2340;--muted:#626A8C;--line:#CBD2EC;--card:#fff;--accent:#3E5BD8;--gold:#F2A516;
@@ -15,32 +15,45 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .top{display:flex;align-items:center;gap:8px}.top h1{font-family:var(--display);font-weight:400;font-size:28px;margin:0;flex:1}
 .pill{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:800}
 .coin{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFE38A,var(--gold) 60%,#C57E00)}
-.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:3px;gap:3px;align-self:flex-start}
-.seg button{padding:7px 12px;border-radius:11px;font-weight:800;font-size:14px;color:var(--muted)}.seg button.on{background:var(--accent);color:#fff}
+.seg{display:none!important}
 .hud{display:flex;justify-content:space-between;font-weight:800;color:var(--muted)}
-.stage{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:14px 12px}
-.tube{width:52px;height:200px;border-radius:0 0 26px 26px;border:3px solid #9AA3C9;border-top:0;background:rgba(255,255,255,.7);
-  display:flex;flex-direction:column-reverse;align-items:center;padding:5px 0;gap:3px;transition:transform .15s;position:relative}
-.tube.sel{transform:translateY(-14px);border-color:var(--accent)}
-.tube.done{border-color:#2DB57A;background:#E5F7EE}
-.ball{width:42px;height:40px;position:relative;transition:transform .15s}.ball svg{width:100%;height:100%;overflow:visible}
-.themes{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
-.themes button{flex:none;display:flex;align-items:center;gap:6px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:5px 10px;font-weight:800;font-size:13px}
-.themes button.on{border-color:var(--accent)}.themes svg{width:22px;height:22px}
-body.t-caramelos .tube{border-radius:12px 12px 22px 22px;border-top:3px solid #9AA3C9;background:rgba(255,240,248,.85)}
-body.t-planetas{background:#151a3a}body.t-planetas .top h1,body.t-planetas .hud,body.t-planetas .help{color:#EEF0FF}
-body.t-planetas .tube{background:rgba(255,255,255,.08);border-color:#5A63A8}
-body.t-navidad{background:linear-gradient(#DDEBF7,#F4F8FB)}body.t-navidad .tube{border-color:#B3212F;background:rgba(255,255,255,.85)}
-body.t-navidad .tube::before{content:"";position:absolute;top:-6px;left:-4px;right:-4px;height:10px;border-radius:6px;background:#fff;box-shadow:0 2px 0 #CFE0EE}
-body.t-frutas .tube{border-radius:6px 6px 22px 22px;border-color:#B98A55;background:rgba(255,248,232,.9)}
-.tube.sel .ball:last-child{transform:translateY(-36px)}
+.stage{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:34px 14px;padding-top:20px}
+/* Tubos de cristal con líquido */
+.tube{--rim:#9AA3C9;--glassbg:rgba(255,255,255,.7);width:52px;height:196px;position:relative;cursor:pointer;
+  transition:transform .28s cubic-bezier(.3,1.5,.5,1);will-change:transform;touch-action:manipulation}
+.tube::before{content:"";position:absolute;top:-4px;left:-6px;right:-6px;height:8px;border-radius:5px;background:var(--rim);z-index:2}
+.glass{position:absolute;inset:0;border:3px solid var(--rim);border-top:0;border-radius:0 0 26px 26px;background:var(--glassbg);overflow:hidden;transition:border-color .2s,box-shadow .3s}
+.glass::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(255,255,255,.6) 0 12%,transparent 24% 72%,rgba(255,255,255,.28) 80%,transparent 90%)}
+.liq{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column-reverse}
+.lq{position:relative;flex:none;width:100%}
+.lq.top::before{content:"";position:absolute;left:-2px;right:-2px;top:-5px;height:10px;border-radius:50%;background:var(--c);filter:brightness(1.18)}
+.lq.wave::before{animation:wave .5s ease-in-out infinite alternate}
+@keyframes wave{from{transform:translateY(-1px) scaleX(1) rotate(-3deg)}to{transform:translateY(1px) scaleX(.96) rotate(3deg)}}
+.tube.sel{transform:translateY(-22px)}.tube.sel .glass{border-color:var(--accent);--rim:var(--accent)}.tube.sel::before{background:var(--accent)}
+.tube.done .glass{box-shadow:0 0 0 3px rgba(45,181,122,.25),0 0 22px rgba(45,181,122,.5)}
+.tube.done::after{content:"";position:absolute;top:-16px;left:9px;right:9px;height:16px;border-radius:6px 6px 3px 3px;z-index:3;
+  background:linear-gradient(90deg,#A8733F,#D9A066 40%,#A8733F);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
+.tube.cork::after{animation:cork .45s cubic-bezier(.3,1.7,.5,1)}@keyframes cork{from{transform:translateY(-34px) rotate(-20deg);opacity:0}}
+.tube.no{animation:no .3s}@keyframes no{25%{translate:-5px 0}75%{translate:5px 0}}
+.tube.bump .liq{animation:bump .45s ease-out}@keyframes bump{30%{transform:scaleY(.96)}60%{transform:scaleY(1.02)}}
+.stream{position:fixed;width:7px;margin-left:-3.5px;border-radius:4px;z-index:11;pointer-events:none;transform-origin:top;
+  background:linear-gradient(90deg,rgba(255,255,255,.35),transparent 45%),var(--c)}
+.drop{position:fixed;width:6px;height:6px;border-radius:50%;z-index:12;pointer-events:none;background:var(--c)}
 .tools{display:flex;gap:8px;justify-content:center}.tools button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-weight:800;font-size:14px}
-.ov{position:fixed;inset:0;background:rgba(29,35,64,.55);display:none;align-items:center;justify-content:center;z-index:5}.ov.show{display:flex}
+.ov{position:fixed;inset:0;background:rgba(29,35,64,.55);display:none;align-items:center;justify-content:center;z-index:30}.ov.show{display:flex}
 .card{background:var(--card);border-radius:24px;padding:24px;text-align:center;width:min(86vw,340px)}
 .card h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0}.card p{color:var(--muted);font-weight:700}
 .card button{background:var(--accent);color:#fff;border-radius:14px;padding:13px;width:100%;font-weight:800;font-size:16px}
 .help{font-size:12px;color:var(--muted);text-align:center;font-weight:700}
-
+/* Temas */
+body.t-caramelos .tube{--rim:#E68AB8;--glassbg:rgba(255,240,248,.85)}body.t-caramelos .glass{border-radius:12px 12px 24px 24px}
+body.t-planetas{background:#151a3a}body.t-planetas .top h1,body.t-planetas .hud,body.t-planetas .help{color:#EEF0FF}
+body.t-planetas .tube{--rim:#5A63A8;--glassbg:rgba(255,255,255,.08)}
+body.t-navidad{background:linear-gradient(#DDEBF7,#F4F8FB)}body.t-navidad .tube{--rim:#B3212F;--glassbg:rgba(255,255,255,.85)}
+body.t-navidad .tube::before{background:#fff;box-shadow:0 2px 0 #CFE0EE,0 0 0 2px #B3212F}
+body.t-frutas .tube{--rim:#B98A55;--glassbg:rgba(255,248,232,.9)}body.t-frutas .glass{border-radius:6px 6px 24px 24px}
+body.t-copos{background:linear-gradient(#E3F2FF,#F7FBFF)}body.t-copos .tube{--rim:#8CC4EE;--glassbg:rgba(255,255,255,.75)}
 /* Hoja de temas (se abre con el botón 🎨 de la barra de Nubo) */
 .tsh{position:fixed;inset:0;background:rgba(29,35,64,.5);display:none;align-items:flex-end;justify-content:center;z-index:9}
 .tsh.show{display:flex}
@@ -52,24 +65,23 @@ body.t-frutas .tube{border-radius:6px 6px 22px 22px;border-color:#B98A55;backgro
 .tgrid button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px;border-radius:16px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:12px;text-align:center}
 .tgrid button.on{border-color:var(--accent)}.tgrid button.lock{opacity:.6}
 .tgrid .pv{width:100%;aspect-ratio:1.2;border-radius:12px;display:grid;place-items:center;overflow:hidden}
-.tgrid .pv svg{width:46%;height:auto}.tgrid .pv div svg{width:100%}
+.tgrid .pv div svg{width:100%}
 .tgrid small{font-size:11px;color:var(--muted);font-weight:800}
 .tgrid .pass{color:#B86E00}
 body.emb .top,body.emb .seg,body.emb .help{display:none!important}
-body.t-copos{background:linear-gradient(#E3F2FF,#F7FBFF)}body.t-copos .tube{border-color:#8CC4EE;background:rgba(255,255,255,.75)}
-.seg{display:none!important}</style>
+</style>
 </head>
 <body>
 <div class="app">
-  <div class="top"><h1>Tubo Diario</h1><span class="pill"><i class="coin"></i><span id="coins">0</span></span></div>
+  <div class="top"><h1>Vierte</h1><span class="pill"><i class="coin"></i><span id="coins">0</span></span></div>
   <div class="seg"><button id="mDay" class="on">Reto diario</button><button id="mLv">Niveles</button></div>
   
   <div class="hud"><span style="display:flex;align-items:center;gap:8px"><button id="bMap" class="k-back">‹</button><span id="lbl"></span></span><span id="mv"></span></div>
   <div class="stage" id="stage"></div>
   <div class="tools"><button id="bU">↶ Deshacer</button><button id="bX">＋ Tubo extra · 30</button><button id="bR">↺</button></div>
-  <div class="help">Toca un tubo y luego otro para pasar la bola de arriba. Solo cae sobre su mismo color o en un tubo vacío.</div>
+  <div class="help">Toca un tubo y luego otro para verter el líquido de arriba. Solo cae sobre su mismo color o en un tubo vacío.</div>
 </div>
-<div class="tsh" id="tsh"><div><h3>Temas <button id="tshX">✕</button></h3><p>Cambia el aspecto de las bolas. Los exclusivos se ganan con el pase de temporada.</p><div class="tgrid" id="themes"></div></div></div>
+<div class="tsh" id="tsh"><div><h3>Temas <button id="tshX">✕</button></h3><p>Cambia el aspecto de los líquidos. Los exclusivos se ganan con el pase de temporada.</p><div class="tgrid" id="themes"></div></div></div>
 <script src="kit.js"></script>
 <div class="ov" id="ov"><div class="card"><h2 id="oT"></h2><p id="oP"></p><button id="oB"></button></div></div>
 <script>
@@ -79,66 +91,151 @@ const COLORS=['#E5484D','#3E7BFA','#F5B82E','#2DB57A','#8E5CF7','#F07A2B','#FF6F
 function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const today=()=>{const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()};
-let mode='day',level=ls.get('tb-level',1),coins=ls.get('mj-coins',0),tubes,sel=null,hist,moves,extra;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let mode='day',level=ls.get('tb-level',1),coins=ls.get('mj-coins',0),tubes,sel=null,hist,moves,extra,busy=false,els=[];
 
+// Reglas de verter: se vierte todo el bloque del mismo color de arriba, hasta llenar el tubo destino
+const topRun=t=>{if(!t.length)return 0;const c=t[t.length-1];let n=0;for(let i=t.length-1;i>=0&&t[i]===c;i--)n++;return n};
+const full=t=>t.length===CAP&&t.every(v=>v===t[0]);
+const won=ts=>ts.every(x=>!x.length||full(x));
+function canPour(a,b){if(!a.length||b.length>=CAP)return 0;const c=a[a.length-1];if(b.length&&b[b.length-1]!==c)return 0;return Math.min(topRun(a),CAP-b.length)}
 // Generador: reparte al azar y comprueba con un solucionador que el nivel tiene solución
 function solvable(t0){const seen=new Set();const key=t=>t.map(x=>x.join('')).sort().join('|');let n=0;
- const won=t=>t.every(x=>!x.length||(x.length===CAP&&x.every(v=>v===x[0])));
  function dfs(t){if(won(t))return true;if(++n>60000)return false;const k=key(t);if(seen.has(k))return false;seen.add(k);
-  for(let a=0;a<t.length;a++){if(!t[a].length)continue;const ball=t[a][t[a].length-1];if(t[a].length===CAP&&t[a].every(v=>v===ball))continue;
-   for(let b=0;b<t.length;b++){if(a===b||t[b].length>=CAP)continue;if(t[b].length&&t[b][t[b].length-1]!==ball)continue;if(!t[b].length&&t[a].every(v=>v===ball))continue;
-    t[b].push(t[a].pop());const ok=dfs(t);t[a].push(t[b].pop());if(ok)return true}}return false}
+  for(let a=0;a<t.length;a++){if(!t[a].length||full(t[a]))continue;
+   for(let b=0;b<t.length;b++){if(a===b)continue;const m=canPour(t[a],t[b]);if(!m)continue;if(!t[b].length&&topRun(t[a])===t[a].length)continue;
+    for(let i=0;i<m;i++)t[b].push(t[a].pop());const ok=dfs(t);for(let i=0;i<m;i++)t[a].push(t[b].pop());if(ok)return true}}return false}
  return dfs(t0.map(x=>x.slice()))}
 function generate(k,seed){const r=rng(seed);for(let tries=0;tries<50;tries++){const all=[];for(let i=0;i<k;i++)for(let j=0;j<CAP;j++)all.push(i);
   for(let i=all.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[all[i],all[j]]=[all[j],all[i]]}
   const t=[];for(let i=0;i<k;i++)t.push(all.slice(i*CAP,i*CAP+CAP));t.push([],[]);
-  if(t.some(x=>x.length&&x.every(v=>v===x[0])))continue;if(solvable(t))return t}return null}
+  if(t.some(x=>x.length&&topRun(x)>=3))continue;if(solvable(t))return t}return null}
 
-// ---------- Temas de Tubo ----------
-const FRUIT=['manzana','arándano','limón','lima','uva','naranja','melocotón','kiwi'];
+// ---------- Temas: frascos para las vistas previas y estilo del líquido en la partida ----------
+const FLASK=(c,deco,bg)=>`<svg viewBox="0 0 40 40"><path d="M15 2h10v10l9 13a9.5 9.5 0 0 1-8.3 13.5H14.3A9.5 9.5 0 0 1 6 25l9-13z" fill="${bg||'rgba(255,255,255,.8)'}" stroke="#9AA3C9" stroke-width="2"/><path d="M9.6 20h20.8l3.6 5.2a9.5 9.5 0 0 1-8.3 12.3H14.3A9.5 9.5 0 0 1 6 25.2z" fill="${c}"/><ellipse cx="20" cy="20.5" rx="10.4" ry="1.8" fill="#fff" opacity=".35"/>${deco}<path d="M13 15l-3.5 5" stroke="#fff" stroke-width="2.2" opacity=".75" stroke-linecap="round"/></svg>`;
 const BALL={
- caritas:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="${c}"/><circle cx="14" cy="13" r="5" fill="rgba(255,255,255,.4)"/><circle cx="15" cy="20" r="2.4" fill="#1D2340"/><circle cx="25" cy="20" r="2.4" fill="#1D2340"/><path d="M15 26q5 4 10 0" stroke="#1D2340" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
- caramelos:c=>`<svg viewBox="0 0 40 40"><path d="M9 20 L0 12 L2 20 L0 28Z M31 20 L40 12 L38 20 L40 28Z" fill="${c}" opacity=".75"/><ellipse cx="20" cy="20" rx="13" ry="12" fill="${c}"/><path d="M12 13 Q20 20 28 27 M10 20 Q20 26 26 30" stroke="rgba(255,255,255,.55)" stroke-width="3" fill="none"/></svg>`,
- frutas:(c,i)=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="22" r="16" fill="${c}"/>${i===2?'<ellipse cx="20" cy="22" rx="18" ry="14" fill="'+c+'"/>':''}${i===4?'<circle cx="13" cy="18" r="6" fill="rgba(0,0,0,.12)"/><circle cx="26" cy="27" r="6" fill="rgba(0,0,0,.12)"/>':''}<path d="M20 7 v-5" stroke="#6B4B2E" stroke-width="2.5" stroke-linecap="round"/><path d="M21 5 q8 -5 11 2 q-7 3 -11 -2" fill="#2DB57A"/><circle cx="13" cy="16" r="4" fill="rgba(255,255,255,.45)"/>${i===1?'<path d="M16 9 l4 3 4-3" stroke="#1D2340" stroke-width="1.5" fill="none"/>':''}</svg>`,
- planetas:(c,i)=>`<svg viewBox="0 0 40 40">${i%2?'<ellipse cx="20" cy="20" rx="20" ry="6" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" transform="rotate(-18 20 20)"/>':''}<circle cx="20" cy="20" r="14" fill="${c}"/><circle cx="14" cy="16" r="3" fill="rgba(0,0,0,.18)"/><circle cx="24" cy="25" r="4" fill="rgba(0,0,0,.15)"/><path d="M8 22 q12 4 24 -2" stroke="rgba(255,255,255,.25)" stroke-width="2.5" fill="none"/>${i%2?'<path d="M1 26 Q20 33 39 14" stroke="rgba(255,255,255,.7)" stroke-width="2.5" fill="none" transform="rotate(0)"/>':''}</svg>`,
- copos:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="${c}"/><circle cx="20" cy="20" r="17" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/><g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 9v22M10.5 14.5l19 11M10.5 25.5l19-11"/><path d="M17 11l3 2 3-2M17 29l3-2 3 2" fill="none"/></g><circle cx="13" cy="12" r="3" fill="rgba(255,255,255,.6)"/></svg>`,
- navidad:c=>`<svg viewBox="0 0 40 40"><path d="M20 0 v5" stroke="#B98A2E" stroke-width="1.5"/><rect x="16" y="4" width="8" height="5" rx="1.5" fill="#E8B84A"/><circle cx="20" cy="23" r="15" fill="${c}"/><path d="M6 21 q14 6 28 0" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-dasharray="2 3"/><path d="M8 27 q12 5 24 0" stroke="#FFE38A" stroke-width="2" fill="none"/><circle cx="14" cy="17" r="3.5" fill="rgba(255,255,255,.55)"/></svg>`};
+ caritas:c=>FLASK(c,'<circle cx="16" cy="28" r="1.8" fill="#1D2340"/><circle cx="24" cy="28" r="1.8" fill="#1D2340"/><path d="M16.5 32q3.5 2.6 7 0" stroke="#1D2340" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+ caramelos:c=>FLASK(c,'<path d="M10 24l8 13M16 21l10 16M23 21l8 12" stroke="#fff" stroke-width="2.4" opacity=".55"/>','rgba(255,240,248,.9)'),
+ frutas:(c,i)=>FLASK(c,'<circle cx="15" cy="29" r="1.3" fill="#3a2a1a" opacity=".55"/><circle cx="22" cy="32" r="1.3" fill="#3a2a1a" opacity=".55"/><circle cx="26" cy="27" r="1.3" fill="#3a2a1a" opacity=".55"/><path d="M25 3q7-3 9 3q-6 2-9-3" fill="#2DB57A"/>','rgba(255,248,232,.9)'),
+ planetas:c=>FLASK(c,'<circle cx="15" cy="27" r=".9" fill="#fff"/><circle cx="24" cy="31" r="1.2" fill="#fff"/><path d="M27 24.5l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z" fill="#fff"/><circle cx="19" cy="34" r=".8" fill="#fff"/>','rgba(255,255,255,.15)'),
+ copos:c=>FLASK(c,'<g stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".9"><path d="M20 24v10M15.7 26.5l8.6 5M15.7 31.5l8.6-5"/></g>'),
+ navidad:c=>FLASK(c,'<path d="M8 27q12 5 24 0" stroke="#FFE38A" stroke-width="2" fill="none" stroke-dasharray="2.5 2.5"/><circle cx="20" cy="4" r="2.6" fill="#B3212F"/>')};
 const TTHEMES_X=[{id:'caritas',name:'Caritas',cost:0},{id:'caramelos',name:'Caramelos',cost:80},{id:'frutas',name:'Frutas',cost:120},{id:'planetas',name:'Planetas',cost:150},{id:'navidad',name:'Navidad',cost:100}];
 const TTHEMES=[...TTHEMES_X,{id:'copos',name:'Copos',pass:true}];
 let theme=ls.get('tb-theme','caritas'),owned=ls.get('tb-owned',['caritas']);
+// Textura del líquido según el tema
+const LIQ={
+ caritas:'radial-gradient(circle at 30% 70%,rgba(255,255,255,.45) 0 2.5px,transparent 3.5px) 0 0/22px 26px,radial-gradient(circle at 70% 30%,rgba(255,255,255,.3) 0 2px,transparent 3px) 0 0/18px 20px',
+ caramelos:'repeating-linear-gradient(135deg,rgba(255,255,255,.4) 0 6px,transparent 6px 14px)',
+ frutas:'radial-gradient(circle,rgba(60,40,20,.35) 0 1.6px,transparent 2.4px) 0 0/14px 17px,radial-gradient(circle at 30% 30%,rgba(255,255,255,.3),transparent 60%)',
+ planetas:'radial-gradient(circle,#fff 0 1px,transparent 1.6px) 0 0/13px 15px,radial-gradient(circle,rgba(255,255,255,.7) 0 1.2px,transparent 2px) 6px 8px/17px 19px,linear-gradient(rgba(0,0,0,.18),transparent)',
+ copos:'radial-gradient(circle,rgba(255,255,255,.85) 0 2px,transparent 2.8px) 0 0/16px 18px,radial-gradient(circle,rgba(255,255,255,.6) 0 1.2px,transparent 2px) 8px 9px/16px 18px',
+ navidad:'repeating-linear-gradient(90deg,transparent 0 8px,rgba(255,227,138,.55) 8px 10px),linear-gradient(rgba(255,255,255,.18),transparent)'};
+const liqBg=c=>`${LIQ[theme]||''}${LIQ[theme]?',':''}linear-gradient(90deg,rgba(0,0,0,.1),transparent 30% 70%,rgba(0,0,0,.12)),${c}`;
+
 function themesUI(){document.body.className='t-'+theme+(window.self!==window.top?' emb':'');owned=ls.get('tb-owned',owned);
   $('themes').innerHTML=TTHEMES.map(t=>{const own=owned.includes(t.id);return `<button data-t="${t.id}" class="${t.id===theme?'on':''} ${own?'':'lock'}"><div class="pv" style="background:${t.id==='planetas'?'#151a3a':'#EEF1FB'}"><div style="display:flex;width:84%">${[0,1,2].map(i=>`<div style="flex:1">${BALL[t.id](COLORS[i],i)}</div>`).join('')}</div></div>${t.name}<small class="${t.pass&&!own?'pass':''}">${own?(t.id===theme?'En uso':'Tuyo'):t.pass?'★ Pase de temporada':'🪙 '+t.cost}</small></button>`}).join('');
   $('themes').querySelectorAll('button').forEach(b=>b.onclick=()=>{const t=TTHEMES.find(x=>x.id===b.dataset.t);coins=ls.get('mj-coins',0);
     if(!owned.includes(t.id)){if(t.pass){show('Exclusivo del pase','Consíguelo en el Pase de temporada de Nubo.','Vale',()=>{});return}
       if(coins<t.cost){show('Tema bloqueado',`Te faltan ${t.cost-coins} monedas.`,'Vale',()=>{});return}coins-=t.cost;ls.set('mj-coins',coins);owned.push(t.id);ls.set('tb-owned',owned)}
-    theme=t.id;ls.set('tb-theme',theme);themesUI();render();$('tsh').classList.remove('show')})}
+    theme=t.id;ls.set('tb-theme',theme);themesUI();build();$('tsh').classList.remove('show')})}
+
 function start(){const k=mode==='day'?6:Math.min(3+Math.floor(level/2),8),seed=mode==='day'?today():900+level*131;
-  tubes=generate(k,seed)||generate(k,seed+7);sel=null;hist=[];moves=0;extra=false;
-  $('lbl').textContent=mode==='day'?'Reto del '+new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'Nivel '+level;render()}
-function render(){$('stage').innerHTML='';tubes.forEach((t,i)=>{const e=document.createElement('div');e.className='tube'+(sel===i?' sel':'')+(t.length===CAP&&t.every(v=>v===t[0])?' done':'');
-  t.forEach(c=>{const b=document.createElement('div');b.className='ball';b.innerHTML=BALL[theme](COLORS[c],c);e.appendChild(b)});e.onclick=()=>tap(i);$('stage').appendChild(e)});
-  $('mv').textContent=moves+' movimientos';$('coins').textContent=coins}
-function tap(i){if(sel===null){if(tubes[i].length){sel=i;tone(400,.05)}render();return}
-  if(sel===i){sel=null;render();return}const a=tubes[sel],b=tubes[i],ball=a[a.length-1];
-  if(b.length<CAP&&(!b.length||b[b.length-1]===ball)){hist.push(JSON.stringify(tubes));b.push(a.pop());moves++;tone(520+b.length*60,.07);
-    if(b.length===CAP&&b.every(v=>v===b[0]))tone(880,.15);}else{tone(150,.12,'sawtooth')}
-  sel=null;render();if(tubes.every(t=>!t.length||(t.length===CAP&&t.every(v=>v===t[0]))))setTimeout(win,300)}
+  tubes=generate(k,seed)||generate(k,seed+7);sel=null;hist=[];moves=0;extra=false;busy=false;
+  $('lbl').textContent=mode==='day'?'Reto del '+new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'Nivel '+level;build()}
+
+// La escena se construye una vez; luego solo se actualiza (así las transiciones son suaves)
+function unit(i){const g=els[i].querySelector('.glass');return (g.clientHeight-16)/CAP}
+function fill(i){const t=tubes[i],liq=els[i].querySelector('.liq'),u=unit(i);liq.innerHTML='';
+  let j=0;while(j<t.length){let k=j;while(k<t.length&&t[k]===t[j])k++;const d=document.createElement('div');d.className='lq'+(k===t.length?' top':'');
+    d.style.cssText=`--c:${COLORS[t[j]]};height:${(k-j)*u}px;background:${liqBg(COLORS[t[j]])}`;d.dataset.c=t[j];liq.appendChild(d);j=k}}
+function build(){const st=$('stage');st.innerHTML='';els=tubes.map((t,i)=>{const e=document.createElement('div');e.className='tube';
+  e.innerHTML='<div class="glass"><div class="liq"></div></div>';e.onclick=()=>tap(i);st.appendChild(e);return e});
+  tubes.forEach((t,i)=>{fill(i);els[i].classList.toggle('done',full(t))});hud()}
+function hud(){$('mv').textContent=moves+(moves===1?' movimiento':' movimientos');$('coins').textContent=coins}
+function setSel(i){if(sel!==null&&els[sel])els[sel].classList.remove('sel');sel=i;if(i!==null)els[i].classList.add('sel')}
+
+function tap(i){if(busy)return;
+  if(sel===null){if(tubes[i].length&&!full(tubes[i])){setSel(i);tone(420,.05);Kit.buzz&&Kit.buzz(8)}return}
+  if(sel===i){setSel(null);tone(330,.04);return}
+  const a=sel,m=canPour(tubes[a],tubes[i]);
+  if(!m){tone(150,.12,'sawtooth');els[i].classList.remove('no');void els[i].offsetWidth;els[i].classList.add('no');
+    if(tubes[i].length&&!full(tubes[i])){setSel(i)}return}
+  pour(a,i,m)}
+
+async function pour(a,b,m){busy=true;const A=els[a],B=els[b],ta=tubes[a],tb=tubes[b],c=ta[ta.length-1],col=COLORS[c];
+  hist.push(JSON.stringify(tubes));
+  const lifted=A.classList.contains('sel')?22:0,sR=A.getBoundingClientRect(),tR=B.getBoundingClientRect(),u=unit(b);
+  const dir=(tR.left+tR.width/2)>=(sR.left+sR.width/2)?1:-1;
+  const px=dir>0?sR.right:sR.left,py=sR.top+lifted,mx=tR.left+tR.width/2-dir*4,my=tR.top-34;
+  // 1) el tubo vuela y se inclina sobre el destino
+  A.style.zIndex=10;A.style.transformOrigin=dir>0?'top right':'top left';A.classList.remove('sel');sel=null;
+  A.style.transition='transform .42s cubic-bezier(.45,0,.2,1)';
+  A.style.transform=`translate(${mx-px}px,${my-py}px) rotate(${dir*74}deg)`;
+  await sleep(420);
+  // 2) cae el chorro y el nivel sube poco a poco
+  const surf0=tR.bottom-3-tb.length*u,surf1=surf0-m*u,T=260*m+140;
+  const st=document.createElement('div');st.className='stream';st.style.cssText=`--c:${col};left:${mx}px;top:${my}px;height:0px;transition:height .14s ease-in`;document.body.appendChild(st);
+  void st.offsetWidth;st.style.height=(surf0-my)+'px';
+  const srcTop=A.querySelector('.lq.top');let dst=B.querySelector('.lq.top');
+  if(!dst||+dst.dataset.c!==c){if(dst)dst.classList.remove('top');dst=document.createElement('div');dst.className='lq top';dst.dataset.c=c;
+    dst.style.cssText=`--c:${col};height:0px;background:${liqBg(col)}`;B.querySelector('.liq').appendChild(dst)}
+  dst.classList.add('wave');glug(m,tb.length);
+  await sleep(120);
+  const h0=parseFloat(srcTop.style.height),d0=parseFloat(dst.style.height);
+  const anim=(el,from,to)=>el.animate([{height:from+'px'},{height:to+'px'}],{duration:T,easing:'linear',fill:'forwards'});
+  anim(srcTop,h0,h0-m*u);anim(dst,d0,d0+m*u);
+  st.animate([{height:(surf0-my)+'px'},{height:(surf1-my)+'px'}],{duration:T,easing:'linear',fill:'forwards'});
+  const drops=setInterval(()=>splash(mx,surf0-(surf0-surf1)*Math.random()*.2,col),90);
+  await sleep(T);clearInterval(drops);
+  // 3) se corta el chorro y el tubo vuelve a su sitio
+  st.animate([{top:my+'px',height:(surf1-my)+'px'},{top:surf1+'px',height:'0px'}],{duration:130,fill:'forwards'});
+  A.style.transition='transform .38s cubic-bezier(.3,1.25,.5,1)';A.style.transform='';
+  await sleep(140);st.remove();dst.classList.remove('wave');B.classList.remove('bump');void B.offsetWidth;B.classList.add('bump');
+  // 4) se aplica el movimiento
+  for(let i=0;i<m;i++)tb.push(ta.pop());moves++;
+  fill(a);fill(b);hud();
+  if(full(tb)){B.classList.add('done','cork');setTimeout(()=>B.classList.remove('cork'),500);const r=B.getBoundingClientRect();
+    try{Kit.burst(r.left+r.width/2,r.top+10,col);Kit.burst(r.left+r.width/2,r.top+40,'#FFE38A')}catch(e){}
+    chime();Kit.buzz&&Kit.buzz([15,30,15])}
+  await sleep(260);A.style.zIndex='';A.style.transition='';busy=false;
+  if(won(tubes))setTimeout(win,350)}
+
+// Pequeñas gotas que salpican al caer
+function splash(x,y,col){const d=document.createElement('div');d.className='drop';d.style.cssText=`--c:${col};left:${x-3}px;top:${y-3}px`;document.body.appendChild(d);
+  const dx=(Math.random()-.5)*26,dy=-6-Math.random()*12;d.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.5)`,opacity:.9,offset:.5},{transform:`translate(${dx*1.4}px,${4}px) scale(.3)`,opacity:0}],{duration:420,easing:'ease-out'}).onfinish=()=>d.remove()}
+
 function win(){const r=mode==='day'?40:10;coins+=r;ls.set('mj-coins',coins);
-  ls.set('mj-pp',ls.get('mj-pp',0)+(mode==='day'?40:15));if(mode==='day'){ls.set('mj-daily-tubo',today());}else{const k=tubes.filter(x=>x.length).length;LH.record(level,moves<=k*3?3:moves<=k*4.5?2:1);level++;ls.set('tb-level',level)}
+  ls.set('mj-pp',ls.get('mj-pp',0)+(mode==='day'?40:15));if(mode==='day'){ls.set('mj-daily-tubo',today());}else{const k=tubes.filter(x=>x.length).length;LH.record(level,moves<=k*2.5?3:moves<=k*3.5?2:1);level++;ls.set('tb-level',level)}
   tone(660,.1);setTimeout(()=>tone(990,.2),120);show('¡Ordenado!',`+${r} monedas · ${moves} movimientos`,mode==='day'?'Ir al mapa':'Siguiente',()=>{if(mode==='day'){mode='lv';LH.show()}else start()})}
 function show(t,p,b,fn){$('oT').textContent=t;$('oP').textContent=p;$('oB').textContent=b;$('ov').classList.add('show');$('oB').onclick=()=>{$('ov').classList.remove('show');fn()}}
 function setMode(m){mode=m;$('mDay').classList.toggle('on',m==='day');$('mLv').classList.toggle('on',m==='lv');start()}
 $('tshX').onclick=()=>$('tsh').classList.remove('show');$('tsh').onclick=e=>{if(e.target.id==='tsh')$('tsh').classList.remove('show')};
 addEventListener('message',e=>{if(e.data&&e.data.t==='themes'){themesUI();$('tsh').classList.add('show')}});
-$('mDay').onclick=()=>setMode('day');$('mLv').onclick=()=>setMode('lv');$('bR').onclick=start;
-$('bU').onclick=()=>{if(hist.length){tubes=JSON.parse(hist.pop());moves--;sel=null;render()}};
-$('bX').onclick=()=>{if(extra)return;if(coins<30){show('Tubo extra','Necesitas 30 monedas.','Vale',()=>{});return}coins-=30;ls.set('mj-coins',coins);tubes.push([]);extra=true;render()};
-let ac;function tone(f,d,type='sine'){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
-  g.gain.setValueAtTime(.1,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+$('mDay').onclick=()=>setMode('day');$('mLv').onclick=()=>setMode('lv');$('bR').onclick=()=>{if(!busy)start()};
+$('bU').onclick=()=>{if(busy||!hist.length)return;tubes=JSON.parse(hist.pop());moves--;sel=null;build()};
+$('bX').onclick=()=>{if(busy||extra)return;if(coins<30){show('Tubo extra','Necesitas 30 monedas.','Vale',()=>{});return}coins-=30;ls.set('mj-coins',coins);tubes.push([]);extra=true;sel=null;build()};
+addEventListener('resize',()=>{if(!busy&&tubes)tubes.forEach((t,i)=>fill(i))});
+
+// ---------- Sonido ----------
+let ac;const A_=()=>{try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();return ac}catch(e){return null}};
+function tone(f,d,type='sine',v=.1,at=0){const c=A_();if(!c)return;const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.02)}
+// «Glu-glu»: burbujas que suben de tono a medida que se llena el tubo + rumor de agua
+function glug(m,lvl){const c=A_();if(!c)return;const T=(260*m+260)/1000,t0=c.currentTime;
+  const n=Math.round(T/.07);for(let i=0;i<n;i++){const t=t0+i*.07+Math.random()*.02,o=c.createOscillator(),g=c.createGain(),p=(lvl+m*i/n)/CAP;
+    o.type='sine';const f=240+p*420+Math.random()*60;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.6,t+.05);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.07,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.06);o.connect(g).connect(c.destination);o.start(t);o.stop(t+.07)}
+  const len=Math.floor(c.sampleRate*T),buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+  const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=buf;f.type='bandpass';f.Q.value=1.2;
+  f.frequency.setValueAtTime(700+lvl*250,t0);f.frequency.linearRampToValueAtTime(1100+(lvl+m)*300,t0+T);
+  g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(.035,t0+.08);g.gain.setValueAtTime(.035,t0+T-.1);g.gain.exponentialRampToValueAtTime(.0001,t0+T);
+  s.connect(f).connect(g).connect(c.destination);s.start(t0);s.stop(t0+T)}
+function chime(){[880,1175,1568].forEach((f,i)=>tone(f,.25,'triangle',.08,i*.07));tone(2093,.4,'sine',.04,.22)}
 themesUI();
-const LH=Kit.levelHome({id:'tubo',name:'Tubo Diario',map:'nubes',color:'linear-gradient(135deg,#6C8BFF,#3E5BD8)',tagline:'Ordena las bolas por colores. Solo caen sobre su mismo color o en un tubo vacío.',
-  art:'<svg viewBox="0 0 70 70"><path d="M14 8 v40 a8 8 0 0 0 16 0 v-40" fill="rgba(255,255,255,.85)"/><path d="M40 8 v40 a8 8 0 0 0 16 0 v-40" fill="rgba(255,255,255,.85)"/><circle cx="22" cy="46" r="6" fill="#E5484D"/><circle cx="22" cy="32" r="6" fill="#F5B82E"/><circle cx="48" cy="46" r="6" fill="#F5B82E"/></svg>',
-  onPlay:n=>{level=n;mode='lv';Kit.tutorial('tubo','Tubo Diario',[["🧪","Ordena por colores","Toca un tubo y luego otro para pasar la bola de arriba.","🔴 ➡ 🧪"],["🎯","Solo sobre su color","Una bola cae sobre otra de su mismo color o en un tubo vacío.",null],["✨","Tubos completos","Gana cuando cada tubo tenga un solo color. Hay un tubo extra si te atascas.",null]],start)}});
+const LH=Kit.levelHome({id:'tubo',name:'Vierte',map:'nubes',color:'linear-gradient(135deg,#6C8BFF,#3E5BD8)',tagline:'Vierte los líquidos hasta que cada tubo tenga un solo color. Solo caen sobre su mismo color o en un tubo vacío.',
+  art:'<svg viewBox="0 0 70 70"><g transform="rotate(-28 24 30)"><path d="M14 10 v34 a8 8 0 0 0 16 0 v-34" fill="rgba(255,255,255,.85)"/><path d="M14 30 h16 v14 a8 8 0 0 1 -16 0z" fill="#F5B82E"/></g><path d="M38 31 q2 6 8 12" stroke="#F5B82E" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M42 26 v28 a8 8 0 0 0 16 0 v-28" fill="rgba(255,255,255,.85)"/><path d="M42 42 h16 v12 a8 8 0 0 1 -16 0z" fill="#F5B82E"/><path d="M42 50 h16 v4 a8 8 0 0 1 -16 0z" fill="#E5484D"/></svg>',
+  onPlay:n=>{level=n;mode='lv';Kit.tutorial('tubo','Vierte',[["🧪","Vierte los colores","Toca un tubo y luego otro para verter el líquido de arriba.","🧪 ➡ 🧪"],["🎯","Solo sobre su color","El líquido cae sobre su mismo color o en un tubo vacío, hasta que se llena.",null],["✨","Un color por tubo","Ganas cuando cada tubo tenga un solo color. Hay un tubo extra si te atascas.",null]],start)}});
 $('bMap').onclick=()=>LH.show();addEventListener('pointerdown',()=>Kit.ambient('calma'),{once:true});
 if(location.hash==='#levels'||!location.hash){level=LH.cur();mode='lv';LH.show()}else start();
 })();

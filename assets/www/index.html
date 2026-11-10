@@ -326,7 +326,7 @@ nav button[data-s=prof].on span{background:linear-gradient(145deg,#FF8FA3,#E5484
     <button class="offer" style="background:linear-gradient(135deg,#1D2340,#3B4380)" data-buy="noads"><div><b>Sin anuncios</b><br><span>Para siempre, en todos los juegos</span></div><i class="price">3,99 €</i></button>
     <button class="offer" style="background:linear-gradient(135deg,#F2A516,#F07A2B)" data-buy="coins"><div><b>Saco de monedas</b><br><span>+1.000 monedas</span></div><i class="price">1,99 €</i></button>
   </div>
-  <div class="tabs" id="shopTabs"><button data-t="atasco" class="on">Atasco</button><button data-t="tubo">Tubo</button><button data-t="flechas">Flechas</button><button data-t="avatars">Avatares</button></div>
+  <div class="tabs" id="shopTabs"><button data-t="atasco" class="on">Atasco</button><button data-t="tubo">Vierte</button><button data-t="flechas">Flechas</button><button data-t="avatars">Avatares</button></div>
   <div class="items" id="items"></div>
   <div class="ver">Prototipo: los pagos con dinero real están simulados.</div>
 </section>
@@ -431,7 +431,7 @@ const ACH = [
   {id:'xmas', name:'Espíritu navideño', desc:'Completa el evento de Navidad · avatar Reno Rodolfo', goal:5, v:s => s.event.navidad || 0},
   {id:'rich', name:'Hucha llena', desc:'Gana 500 monedas en total', goal:500, v:s => s.st.earned}];
 
-/* ===== Arte de Flechas y Tubo ===== */
+/* ===== Arte de Flechas y Vierte ===== */
 const PAL={parking:['#E5484D','#3E7BFA','#F5B82E','#2DB57A','#FFFFFF','#8E5CF7'],
   acuario:['#FF8A3D','#FFD23F','#FF6FA8','#7BE0C3','#B48CFF'],clasico:['#E5484D','#3E7BFA','#F5B82E','#2DB57A'],
   navidad:['#2DB57A','#E5484D','#3E7BFA','#F5B82E'],pinguinos:['#E5484D','#3E7BFA','#F5B82E','#2DB57A','#8E5CF7']};
@@ -448,13 +448,14 @@ const ART={
 };
 const FTHEMES=[{id:'parking',name:'Parking',cost:0,bg:'#3B3F4C'},{id:'acuario',name:'Acuario',cost:0,bg:'#2E8FD6'},{id:'clasico',name:'Clásico',cost:0,bg:'#C58A52'},{id:'navidad',name:'Navidad',cost:100,bg:'#B83242'},{id:'pinguinos',name:'Pingüinos',pass:true,bg:'#8CCBF2'}];
 const COLORS=['#E5484D','#3E7BFA','#F5B82E','#2DB57A','#8E5CF7','#F07A2B','#FF6FA8','#22B8CF'];
+const FLASK=(c,deco,bg)=>`<svg viewBox="0 0 40 40"><path d="M15 2h10v10l9 13a9.5 9.5 0 0 1-8.3 13.5H14.3A9.5 9.5 0 0 1 6 25l9-13z" fill="${bg||'rgba(255,255,255,.8)'}" stroke="#9AA3C9" stroke-width="2"/><path d="M9.6 20h20.8l3.6 5.2a9.5 9.5 0 0 1-8.3 12.3H14.3A9.5 9.5 0 0 1 6 25.2z" fill="${c}"/><ellipse cx="20" cy="20.5" rx="10.4" ry="1.8" fill="#fff" opacity=".35"/>${deco}<path d="M13 15l-3.5 5" stroke="#fff" stroke-width="2.2" opacity=".75" stroke-linecap="round"/></svg>`;
 const BALL={
- caritas:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="${c}"/><circle cx="14" cy="13" r="5" fill="rgba(255,255,255,.4)"/><circle cx="15" cy="20" r="2.4" fill="#1D2340"/><circle cx="25" cy="20" r="2.4" fill="#1D2340"/><path d="M15 26q5 4 10 0" stroke="#1D2340" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
- caramelos:c=>`<svg viewBox="0 0 40 40"><path d="M9 20 L0 12 L2 20 L0 28Z M31 20 L40 12 L38 20 L40 28Z" fill="${c}" opacity=".75"/><ellipse cx="20" cy="20" rx="13" ry="12" fill="${c}"/><path d="M12 13 Q20 20 28 27 M10 20 Q20 26 26 30" stroke="rgba(255,255,255,.55)" stroke-width="3" fill="none"/></svg>`,
- frutas:(c,i)=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="22" r="16" fill="${c}"/>${i===2?'<ellipse cx="20" cy="22" rx="18" ry="14" fill="'+c+'"/>':''}${i===4?'<circle cx="13" cy="18" r="6" fill="rgba(0,0,0,.12)"/><circle cx="26" cy="27" r="6" fill="rgba(0,0,0,.12)"/>':''}<path d="M20 7 v-5" stroke="#6B4B2E" stroke-width="2.5" stroke-linecap="round"/><path d="M21 5 q8 -5 11 2 q-7 3 -11 -2" fill="#2DB57A"/><circle cx="13" cy="16" r="4" fill="rgba(255,255,255,.45)"/>${i===1?'<path d="M16 9 l4 3 4-3" stroke="#1D2340" stroke-width="1.5" fill="none"/>':''}</svg>`,
- planetas:(c,i)=>`<svg viewBox="0 0 40 40">${i%2?'<ellipse cx="20" cy="20" rx="20" ry="6" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5" transform="rotate(-18 20 20)"/>':''}<circle cx="20" cy="20" r="14" fill="${c}"/><circle cx="14" cy="16" r="3" fill="rgba(0,0,0,.18)"/><circle cx="24" cy="25" r="4" fill="rgba(0,0,0,.15)"/><path d="M8 22 q12 4 24 -2" stroke="rgba(255,255,255,.25)" stroke-width="2.5" fill="none"/>${i%2?'<path d="M1 26 Q20 33 39 14" stroke="rgba(255,255,255,.7)" stroke-width="2.5" fill="none" transform="rotate(0)"/>':''}</svg>`,
- copos:c=>`<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="${c}"/><circle cx="20" cy="20" r="17" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/><g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M20 9v22M10.5 14.5l19 11M10.5 25.5l19-11"/><path d="M17 11l3 2 3-2M17 29l3-2 3 2" fill="none"/></g><circle cx="13" cy="12" r="3" fill="rgba(255,255,255,.6)"/></svg>`,
- navidad:c=>`<svg viewBox="0 0 40 40"><path d="M20 0 v5" stroke="#B98A2E" stroke-width="1.5"/><rect x="16" y="4" width="8" height="5" rx="1.5" fill="#E8B84A"/><circle cx="20" cy="23" r="15" fill="${c}"/><path d="M6 21 q14 6 28 0" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-dasharray="2 3"/><path d="M8 27 q12 5 24 0" stroke="#FFE38A" stroke-width="2" fill="none"/><circle cx="14" cy="17" r="3.5" fill="rgba(255,255,255,.55)"/></svg>`};
+ caritas:c=>FLASK(c,'<circle cx="16" cy="28" r="1.8" fill="#1D2340"/><circle cx="24" cy="28" r="1.8" fill="#1D2340"/><path d="M16.5 32q3.5 2.6 7 0" stroke="#1D2340" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+ caramelos:c=>FLASK(c,'<path d="M10 24l8 13M16 21l10 16M23 21l8 12" stroke="#fff" stroke-width="2.4" opacity=".55"/>','rgba(255,240,248,.9)'),
+ frutas:(c,i)=>FLASK(c,'<circle cx="15" cy="29" r="1.3" fill="#3a2a1a" opacity=".55"/><circle cx="22" cy="32" r="1.3" fill="#3a2a1a" opacity=".55"/><circle cx="26" cy="27" r="1.3" fill="#3a2a1a" opacity=".55"/><path d="M25 3q7-3 9 3q-6 2-9-3" fill="#2DB57A"/>','rgba(255,248,232,.9)'),
+ planetas:c=>FLASK(c,'<circle cx="15" cy="27" r=".9" fill="#fff"/><circle cx="24" cy="31" r="1.2" fill="#fff"/><path d="M27 24.5l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z" fill="#fff"/><circle cx="19" cy="34" r=".8" fill="#fff"/>','rgba(255,255,255,.15)'),
+ copos:c=>FLASK(c,'<g stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".9"><path d="M20 24v10M15.7 26.5l8.6 5M15.7 31.5l8.6-5"/></g>'),
+ navidad:c=>FLASK(c,'<path d="M8 27q12 5 24 0" stroke="#FFE38A" stroke-width="2" fill="none" stroke-dasharray="2.5 2.5"/><circle cx="20" cy="4" r="2.6" fill="#B3212F"/>')};
 const TTHEMES_X=[{id:'caritas',name:'Caritas',cost:0},{id:'caramelos',name:'Caramelos',cost:80},{id:'frutas',name:'Frutas',cost:120},{id:'planetas',name:'Planetas',cost:150},{id:'navidad',name:'Navidad',cost:100}];
 const TTHEMES=[...TTHEMES_X,{id:'copos',name:'Copos',pass:true}];
 
@@ -472,7 +473,7 @@ const setP=p=>ls.set('mj-prefs',p);
 /* ===== Juegos ===== */
 const ICON={
  atasco:`<svg viewBox="0 0 70 70"><rect x="6" y="6" width="58" height="58" rx="12" fill="#E9C79D"/><rect x="11" y="11" width="32" height="14" rx="5" fill="#E5484D"/><rect x="48" y="11" width="11" height="30" rx="5" fill="#3E7BFA"/><rect x="11" y="30" width="14" height="29" rx="5" fill="#F5B82E"/><rect x="30" y="45" width="29" height="14" rx="5" fill="#2DB57A"/><circle cx="21" cy="18" r="2.2" fill="#1D2340"/><circle cx="31" cy="18" r="2.2" fill="#1D2340"/></svg>`,
- tubo:`<svg viewBox="0 0 70 70">${[0,1,2].map(i=>`<path d="M${9+i*19} 6 v44 a8.5 8.5 0 0 0 17 0 v-44" fill="rgba(255,255,255,.85)" stroke="#fff" stroke-width="2.5"/>`).join('')}<circle cx="17.5" cy="50" r="6.5" fill="#E5484D"/><circle cx="17.5" cy="36" r="6.5" fill="#3E7BFA"/><circle cx="36.5" cy="50" r="6.5" fill="#3E7BFA"/><circle cx="36.5" cy="36" r="6.5" fill="#E5484D"/><circle cx="36.5" cy="22" r="6.5" fill="#F5B82E"/><circle cx="55.5" cy="50" r="6.5" fill="#F5B82E"/></svg>`,
+ tubo:`<svg viewBox="0 0 70 70"><defs><clipPath id="tbc0"><path d="M9 6 v44 a8.5 8.5 0 0 0 17 0 v-44z"/></clipPath><clipPath id="tbc1"><path d="M28 6 v44 a8.5 8.5 0 0 0 17 0 v-44z"/></clipPath><clipPath id="tbc2"><path d="M47 6 v44 a8.5 8.5 0 0 0 17 0 v-44z"/></clipPath></defs><g clip-path="url(#tbc0)"><path d="M9 6 v44 a8.5 8.5 0 0 0 17 0 v-44z" fill="rgba(255,255,255,.85)"/><rect x="9" y="44.5" width="17" height="15" fill="#E5484D"/><rect x="9" y="31.5" width="17" height="14" fill="#3E7BFA"/><ellipse cx="17.5" cy="32.0" rx="8.5" ry="1.8" fill="#fff" opacity=".45"/></g><path d="M9 6 v44 a8.5 8.5 0 0 0 17 0 v-44" fill="none" stroke="#fff" stroke-width="2.5"/><g clip-path="url(#tbc1)"><path d="M28 6 v44 a8.5 8.5 0 0 0 17 0 v-44z" fill="rgba(255,255,255,.85)"/><rect x="28" y="45.5" width="17" height="14" fill="#3E7BFA"/><rect x="28" y="32.5" width="17" height="14" fill="#E5484D"/><rect x="28" y="19.5" width="17" height="14" fill="#F5B82E"/><ellipse cx="36.5" cy="20.0" rx="8.5" ry="1.8" fill="#fff" opacity=".45"/></g><path d="M28 6 v44 a8.5 8.5 0 0 0 17 0 v-44" fill="none" stroke="#fff" stroke-width="2.5"/><g clip-path="url(#tbc2)"><path d="M47 6 v44 a8.5 8.5 0 0 0 17 0 v-44z" fill="rgba(255,255,255,.85)"/><rect x="47" y="44.5" width="17" height="15" fill="#F5B82E"/><ellipse cx="55.5" cy="45.0" rx="8.5" ry="1.8" fill="#fff" opacity=".45"/></g><path d="M47 6 v44 a8.5 8.5 0 0 0 17 0 v-44" fill="none" stroke="#fff" stroke-width="2.5"/></svg>`,
  flechas:`<svg viewBox="0 0 70 70"><g transform="translate(9 6)"><rect x="2" y="0" width="22" height="30" rx="7" fill="#E5484D"/><rect x="5" y="6" width="16" height="7" rx="2" fill="#BFE3FF"/></g><g transform="translate(66 40) rotate(90)"><rect x="2" y="0" width="22" height="30" rx="7" fill="#F5B82E"/><rect x="5" y="6" width="16" height="7" rx="2" fill="#BFE3FF"/></g><g transform="translate(37 66) rotate(180)"><rect x="2" y="0" width="22" height="30" rx="7" fill="#2DB57A"/><rect x="5" y="6" width="16" height="7" rx="2" fill="#BFE3FF"/></g><path d="M44 8 l8 -6 l8 6 M52 2 v14" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>`,
  cajas:`<svg viewBox="0 0 70 70"><rect x="6" y="36" width="19" height="19" rx="4" fill="#8E5CF7"/><rect x="25.5" y="36" width="19" height="19" rx="4" fill="#FF6FA8"/><rect x="45" y="36" width="19" height="19" rx="4" fill="#8E5CF7"/><rect x="16" y="16" width="19" height="19" rx="4" fill="#22B8CF"/><rect x="35.5" y="16" width="19" height="19" rx="4" fill="#8E5CF7"/></svg>`,
  tornillos:`<svg viewBox="0 0 70 70"><rect x="10" y="12" width="50" height="46" rx="8" fill="#9AA3C9"/><circle cx="22" cy="24" r="7" fill="#E5484D"/><circle cx="48" cy="24" r="7" fill="#3E7BFA"/><circle cx="22" cy="46" r="7" fill="#F5B82E"/><circle cx="48" cy="46" r="7" fill="#2DB57A"/><path d="M18 24h8M44 24h8M18 46h8M44 46h8" stroke="#1D2340" stroke-width="2.5"/></svg>`,
@@ -493,7 +494,7 @@ const ICON={
  palabras:`<svg viewBox="0 0 70 70">${['R','E','C','R','E','O'].map((l,i)=>`<rect x="${6+(i%3)*20}" y="${14+Math.floor(i/3)*22}" width="18" height="18" rx="4" fill="#fff"/><text x="${15+(i%3)*20}" y="${28+Math.floor(i/3)*22}" font-size="13" font-weight="900" text-anchor="middle" fill="#1D2340" font-family="Nunito,sans-serif">${l}</text>`).join('')}</svg>`};
 const GAMES=[
  {id:'atasco',name:'Atasco',file:'atasco.html',bg:'linear-gradient(145deg,#F2B266,#C9783A)'},
- {id:'tubo',name:'Tubo Diario',file:'tubo.html',daily:'tubo.html#daily',bg:'linear-gradient(145deg,#6C8BFF,#3E5BD8)'},
+ {id:'tubo',name:'Vierte',file:'tubo.html',daily:'tubo.html#daily',bg:'linear-gradient(145deg,#6C8BFF,#3E5BD8)'},
  {id:'flechas',name:'Flechas',file:'flechas.html',daily:'flechas.html#daily',bg:'linear-gradient(145deg,#5C6378,#2C3040)'},
  {id:'cajas',name:'Cajas de colores',file:'cajas.html',daily:'cajas.html#daily',bg:'linear-gradient(145deg,#C9B2FF,#8E5CF7)',isNew:true},
  {id:'detective',name:'Detective',file:'detective.html',daily:'detective.html#daily',bg:'linear-gradient(145deg,#4B5A82,#1F2A4A)',isNew:true},
@@ -534,8 +535,8 @@ const ANCHOR=new Date(2026,10,9);  // prototipo: la temporada 1 empieza hoy
 const SEASONS_R=[
  {n:1,name:'Primeras nieves',emoji:'❄',bg:'linear-gradient(135deg,#1F4E9A,#3A7BD5 55%,#6FC3F7)',sub:'Pingüinos y copos exclusivos',newGame:'cajas'},
  {n:2,name:'Luces de Navidad',emoji:'🎄',bg:'linear-gradient(135deg,#9E1B2C,#E5484D 55%,#F5803E)',sub:'Renos, regalos y luces',newGame:'reinas',plan:['Tema «Luces» (Atasco)','Tema «Renos» (Flechas)','Avatares Elfo y Estrella']},
- {n:3,name:'Fin de año',emoji:'🎆',bg:'linear-gradient(135deg,#1D2340,#5B3B8C 55%,#F2A516)',sub:'Fuegos artificiales y brillos',newGame:'tornillos',plan:['Tema «Confeti» (Tubo)','Tema «Fuegos» (Atasco)','Avatares Reloj y Cohete']},
- {n:4,name:'Invierno ártico',emoji:'🐻‍❄️',bg:'linear-gradient(135deg,#0E7490,#22B8CF 55%,#A5F3FC)',sub:'Osos polares e iglús',newGame:null,plan:['Tema «Iglú» (Atasco)','Tema «Auroras» (Tubo)','Avatares Oso polar y Foca']}];
+ {n:3,name:'Fin de año',emoji:'🎆',bg:'linear-gradient(135deg,#1D2340,#5B3B8C 55%,#F2A516)',sub:'Fuegos artificiales y brillos',newGame:'tornillos',plan:['Tema «Confeti» (Vierte)','Tema «Fuegos» (Atasco)','Avatares Reloj y Cohete']},
+ {n:4,name:'Invierno ártico',emoji:'🐻‍❄️',bg:'linear-gradient(135deg,#0E7490,#22B8CF 55%,#A5F3FC)',sub:'Osos polares e iglús',newGame:null,plan:['Tema «Iglú» (Atasco)','Tema «Auroras» (Vierte)','Avatares Oso polar y Foca']}];
 function season(){const d=Math.floor((Date.now()-ANCHOR)/864e5),i=Math.max(0,Math.floor(d/14))%SEASONS_R.length,start=new Date(ANCHOR.getTime()+Math.floor(Math.max(0,d)/14)*14*864e5);
   return{...SEASONS_R[i],end:new Date(start.getTime()+14*864e5),left:Math.max(0,14-(Math.max(0,d)%14))}}
 const SA=[ // avatares de temporada (exclusivos)
@@ -544,8 +545,8 @@ const SA=[ // avatares de temporada (exclusivos)
 AVATARS.push(...SA);
 // 30 niveles de 100 puntos. Exclusivos: lo mejor solo con el pase, y lo gratis exclusivo casi al final
 const TIERS=Array.from({length:30},(_,i)=>{const n=i+1;
-  const f={5:{e:'💡',t:'3 pistas',coins:0},10:{e:'🪙',t:'150 monedas',coins:150},20:{e:'🪙',t:'250 monedas',coins:250},28:{e:'❄',t:'Tema Copos (Tubo)',ex:1,theme:['tubo','copos']}}[n]||(n%3===0?{e:'🪙',t:(20+n*2)+' monedas',coins:20+n*2}:null);
-  const p={1:{e:'🪙',t:'200 monedas',coins:200},8:{e:'🐧',t:'Tema Pingüinos (Flechas)',ex:1,theme:['flechas','pinguinos']},15:{e:'🐧',t:'Avatar Pingüino',ex:1,avatar:'pinguino'},20:{e:'❄',t:'Tema Copos (Tubo)',ex:1,theme:['tubo','copos']},
+  const f={5:{e:'💡',t:'3 pistas',coins:0},10:{e:'🪙',t:'150 monedas',coins:150},20:{e:'🪙',t:'250 monedas',coins:250},28:{e:'❄',t:'Tema Copos (Vierte)',ex:1,theme:['tubo','copos']}}[n]||(n%3===0?{e:'🪙',t:(20+n*2)+' monedas',coins:20+n*2}:null);
+  const p={1:{e:'🪙',t:'200 monedas',coins:200},8:{e:'🐧',t:'Tema Pingüinos (Flechas)',ex:1,theme:['flechas','pinguinos']},15:{e:'🐧',t:'Avatar Pingüino',ex:1,avatar:'pinguino'},20:{e:'❄',t:'Tema Copos (Vierte)',ex:1,theme:['tubo','copos']},
     25:{e:'✨',t:'Celebración «Ventisca»',ex:1},30:{e:'🦍',t:'Avatar Yeti legendario',ex:1,avatar:'yeti',legend:1}}[n]||(n%2===0?{e:'🪙',t:(40+n*4)+' monedas',coins:40+n*4}:{e:'↶',t:'5 deshacer'});
   return{n,f,p}});
 function seasonKey(){return 's'+season().n}
@@ -637,7 +638,7 @@ const RECREO_ACH=[
   {id:'r_temas',name:'Decorador',desc:'Consigue 8 temas en total',goal:8,v:()=>A().owned.length+ls.get('fl-owned',['a','b','c']).length+ls.get('tb-owned',['a']).length}];
 const GAME_ACH={
   flechas:[{id:'f5',name:'Aparcacoches',desc:'Supera 5 niveles de Flechas',goal:5,v:()=>ls.get('fl-level',1)-1},{id:'f20',name:'Jefe del parking',desc:'Supera 20 niveles',goal:20,v:()=>ls.get('fl-level',1)-1},{id:'fd',name:'Madrugador',desc:'Completa un reto diario de Flechas',goal:1,v:()=>ls.get('mj-daily-flechas',0)?1:0}],
-  tubo:[{id:'t5',name:'Ordenado',desc:'Supera 5 niveles de Tubo',goal:5,v:()=>ls.get('tb-level',1)-1},{id:'t20',name:'Maniático del orden',desc:'Supera 20 niveles',goal:20,v:()=>ls.get('tb-level',1)-1},{id:'td',name:'Fiel al tubo',desc:'Completa un reto diario de Tubo',goal:1,v:()=>ls.get('mj-daily-tubo',0)?1:0}]};
+  tubo:[{id:'t5',name:'Ordenado',desc:'Supera 5 niveles de Vierte',goal:5,v:()=>ls.get('tb-level',1)-1},{id:'t20',name:'Maniático del orden',desc:'Supera 20 niveles',goal:20,v:()=>ls.get('tb-level',1)-1},{id:'td',name:'Fiel al tubo',desc:'Completa un reto diario de Vierte',goal:1,v:()=>ls.get('mj-daily-tubo',0)?1:0}]};
 let achTab='recreo';
 function renderProfile(){
   const a=A(),x=xpInfo(),p=P();document.querySelectorAll('.coins').forEach(e=>e.textContent=coins());
@@ -658,7 +659,7 @@ function renderProfile(){
     flechas:GAME_ACH.flechas.map(q=>({...q,got:q.v()>=q.goal,val:q.v()})),tubo:GAME_ACH.tubo.map(q=>({...q,got:q.v()>=q.goal,val:q.v()}))};
   const all=Object.values(groups).flat();
   const kg=KITGAMES().filter(released).map(g=>({g,got:ls.get('k-'+g.id+'-ach',{})})),kgN=kg.reduce((n,x)=>n+Object.keys(x.got).length,0);
-  $('achTabs').innerHTML=[['recreo','Nubo'],['juegos','Juegos'],['atasco','Atasco'],['flechas','Flechas'],['tubo','Tubo']].map(([k,n])=>`<button data-k="${k}" class="${achTab===k?'on':''}">${n} ${k==='juegos'?kgN+'/'+kg.length*Kit.ACH.length:groups[k].filter(q=>q.got).length+'/'+groups[k].length}</button>`).join('');
+  $('achTabs').innerHTML=[['recreo','Nubo'],['juegos','Juegos'],['atasco','Atasco'],['flechas','Flechas'],['tubo','Vierte']].map(([k,n])=>`<button data-k="${k}" class="${achTab===k?'on':''}">${n} ${k==='juegos'?kgN+'/'+kg.length*Kit.ACH.length:groups[k].filter(q=>q.got).length+'/'+groups[k].length}</button>`).join('');
   $('achTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{achTab=b.dataset.k;renderProfile()});
   if(achTab==='juegos'){$('achs').innerHTML=kg.map(({g,got})=>`<div class="gcard"><div class="icon" style="background:${g.bg}">${ICON[g.id]||''}</div><div><b>${g.name}</b><div class="md">${Kit.ACH.map(a=>got[a.id]?`<span title="${a.name}">${a.icon}</span>`:`<i title="${a.name}">${a.icon}</i>`).join('')}</div></div><span class="p" style="font-weight:900;color:var(--muted);font-size:12px">${Object.keys(got).length}/${Kit.ACH.length}</span></div>`).join('');}
   else $('achs').innerHTML=groups[achTab].map(q=>`<div class="ach ${q.got?'got':''}"><span class="m">🏅</span><div><b>${q.name}</b><small>${q.desc}</small></div><span class="p">${q.got?'Hecho':Math.min(q.val,q.goal)+'/'+q.goal}</span></div>`).join('');
@@ -708,7 +709,7 @@ function animatePass(from,to,t0,t1,hp){const bar=$('pBar');if(!bar)return;const 
 /* ===== LOGROS: aviso cuando se consigue uno nuevo ===== */
 const KITGAMES=()=>GAMES.filter(g=>g.file&&g.id!=='atasco');
 function checkHubAch(){const seen=ls.get('mj-ach-seen',{}),first=!localStorage.getItem('mj-ach-seen');const a=A();let changed=false;
-  const all=[...RECREO_ACH.map(q=>({...q,k:'r_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Nubo'})),...GAME_ACH.flechas.map(q=>({...q,k:'f_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Flechas'})),...GAME_ACH.tubo.map(q=>({...q,k:'t_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Tubo Diario'})),...ACH.map(q=>({...q,k:'a_'+q.id,ok:!!(a.ach||{})[q.id],rw:0,grp:'Atasco'}))];
+  const all=[...RECREO_ACH.map(q=>({...q,k:'r_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Nubo'})),...GAME_ACH.flechas.map(q=>({...q,k:'f_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Flechas'})),...GAME_ACH.tubo.map(q=>({...q,k:'t_'+q.id,ok:q.v()>=q.goal,rw:20,grp:'Vierte'})),...ACH.map(q=>({...q,k:'a_'+q.id,ok:!!(a.ach||{})[q.id],rw:0,grp:'Atasco'}))];
   all.forEach(q=>{if(q.ok&&!seen[q.k]){seen[q.k]=Date.now();changed=true;if(!first){if(q.rw)setCoins(coins()+q.rw);Kit.notifyAch('¡Logro desbloqueado! · '+q.grp,q.name,q.desc,q.rw,'🏅')}}});
   if(changed||first)ls.set('mj-ach-seen',seen);if(changed)document.querySelectorAll('.coins').forEach(e=>e.textContent=coins())}
 
@@ -788,7 +789,7 @@ const SFX={
   back:()=>{whoosh(false,.08);const t=lac.currentTime;nt(midiF(67),t,.15,'triangle',.08);nt(midiF(60),t+.07,.2,'triangle',.07)},
   soft:()=>{const t=lac.currentTime;nt(midiF(79),t,.1,'sine',.07)},
   avatar:()=>{const t=lac.currentTime;nt(midiF(72),t,.12,'triangle',.08);nt(midiF(79),t+.06,.14,'triangle',.07);nt(midiF(76),t+.12,.18,'triangle',.06)}};
-document.addEventListener('pointerdown',e=>{if(P().sound===false||!actx())return;const el=e.target;let b;
+document.addEventListener('click',e=>{if(P().sound===false||!actx())return;const el=e.target;let b;
   if(b=el.closest('#grid .app')){if(b.classList.contains('lock')||b.classList.contains('rest'))SFX.locked();else{SFX.game(b.dataset.g);b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');setTimeout(()=>b.classList.remove('pop'),360)}}
   else if(b=el.closest('nav button'))SFX.nav(b.dataset.s);
   else if(el.closest('#fabPass'))SFX.pass();else if(el.closest('#fabDaily'))SFX.daily();

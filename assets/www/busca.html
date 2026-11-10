@@ -8,7 +8,7 @@ const SETS = {
   playa: { e: '🐚🦀⛱️🏐🩴🕶️🧴🍦🐠🪣⚓🦩🐙🌴🛟🍉🥥🏄🐬🪸🦞🐢🌞🐡🦑🪼🏖️🥤🍹', bg: 'radial-gradient(circle at 50% 10%,#BFEFFF,#F5D78E 60%)', clut: '🟡🟠⚪🫧💧' },
   espacio: { e: '🚀🪐⭐🌙☄️👽🛸🌍🌞🔭🛰️👩‍🚀🌠🧑‍🚀🌑🌕💫🧪🔋📡🧲🌌🪨🌟🌘🌖🤖🛞', bg: 'radial-gradient(circle at 70% 20%,#3B4380,#0E1230)', clut: '✦·✧⋆•' } };
 const css = `
-.bs{position:absolute;transform:translate(-50%,-50%) rotate(var(--r));line-height:1;transition:left .6s ease,top .6s ease,opacity .5s}
+.bs{position:absolute;pointer-events:none;transform:translate(-50%,-50%) rotate(var(--r));line-height:1;transition:left .6s ease,top .6s ease,opacity .5s}
 .bs>span{display:inline-block}
 .m-pulse>span{animation:bpulse var(--d) ease-in-out infinite}@keyframes bpulse{50%{transform:scale(.45)}}
 .m-grow>span{animation:bgrow var(--d) ease-in-out infinite}@keyframes bgrow{50%{transform:scale(1.6)}}
@@ -33,7 +33,7 @@ function start(c) {
     o.mv = r() < moving ? MOVES[Math.floor(r() * MOVES.length)] : ''; o.d = (1.6 + r() * 2.8).toFixed(2) + 's'; });
   foundN = 0; t0 = Date.now();
   c.stage.style.flexDirection = 'column'; c.stage.style.gap = '10px';
-  c.stage.innerHTML = `<style>${css}</style><div id="sc" style="position:relative;width:min(100%,440px);aspect-ratio:3/4;max-height:100%;border-radius:20px;overflow:hidden;background:${S.bg};box-shadow:inset 0 0 0 3px rgba(0,0,0,.08)"></div>
+  c.stage.innerHTML = `<style>${css}</style><div id="sc" style="position:relative;isolation:isolate;touch-action:manipulation;width:min(100%,440px);aspect-ratio:3/4;max-height:100%;border-radius:20px;overflow:hidden;background:${S.bg};box-shadow:inset 0 0 0 3px rgba(0,0,0,.08)"></div>
     <div id="tg" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"></div>`;
   sc = c.stage.querySelector('#sc');
   // capa de desorden (no se puede tocar): manchas, papeles, estrellas...
@@ -41,8 +41,13 @@ function start(c) {
   for (let i = 0; i < 70 + lv * 2; i++) clut += `<span class="clut" style="left:${r() * 100}%;top:${r() * 100}%;font-size:${10 + r() * 34}px;transform:translate(-50%,-50%) rotate(${r() * 360}deg)">${cl[Math.floor(r() * cl.length)]}</span>`;
   sc.innerHTML = clut;
   items.forEach(o => { const b = Kit.h(`<button class="bs ${o.mv}" style="left:${o.x}%;top:${o.y}%;font-size:${o.s}px;--r:${o.rot}deg;--d:${o.d};--dx:${(Math.random() - .5) * 40}px;--dy:${(Math.random() - .5) * 40}px;z-index:${Math.floor(o.s)}"><span>${o.e}</span></button>`);
-    b.onclick = ev => { ev.stopPropagation(); tap(o, b, ev); }; o.el = b; sc.appendChild(b); });
-  sc.onclick = () => penalty();
+    o.el = b; sc.appendChild(b); });
+  // Toque con margen: vale cualquier toque cerca del objeto (aunque esté encogido o en movimiento)
+  sc.onclick = ev => { let best = null, bd = 1e9;
+    items.forEach(o => { if (!o.t || o.done) return; const q = o.el.firstElementChild.getBoundingClientRect(), cx = q.left + q.width / 2, cy = q.top + q.height / 2;
+      const d = Math.hypot(ev.clientX - cx, ev.clientY - cy), lim = Math.max(q.width, q.height, o.s) / 2 + 24;
+      if (d <= lim && d < bd) { bd = d; best = o; } });
+    if (best) tap(best, best.el, ev); else penalty(); };
   drawT(); c.tools([{ t: '💡 Pista · 20', fn: hint }, { t: '🔍 Congelar 5 s · 30', fn: freeze }]);
   timer = setInterval(() => { if (!document.body.contains(sc)) return stop(); ctx.info(`⏱ ${Math.floor((Date.now() - t0) / 1000)} s`); }, 500);
   // algunos objetos desaparecen y reaparecen en otro sitio
@@ -57,7 +62,7 @@ function tap(o, b, ev) {
   const t = targets.find(x => !x.found && x.e === o.e && o.t);
   if (!t) return penalty();
   t.found = true; o.done = true; foundN++; Kit.tone(880, .1); Kit.tone(1320, .12, 'triangle'); Kit.burst(ev.clientX, ev.clientY); b.classList.add('found'); drawT();
-  if (foundN === targets.length) { stop(); const s = (Date.now() - t0) / 1000, par = 10 + targets.length * 7; ctx.win(s < par ? 3 : s < par * 1.7 ? 2 : 1, { text: `Todo encontrado en ${Math.round(s)} s` }); } }
+  if (foundN === targets.length) { stop(); sc.onclick = null; sc.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' }); const s = (Date.now() - t0) / 1000, par = 10 + targets.length * 7; ctx.win(s < par ? 3 : s < par * 1.7 ? 2 : 1, { text: `Todo encontrado en ${Math.round(s)} s` }); } }
 function hint() { if (Kit.coins() < 20) { Kit.toast('Necesitas 20 monedas'); return; } const t = targets.find(x => !x.found); if (!t) return; Kit.addCoins(-20);
   const o = items.find(i => i.t && i.e === t.e); o.frozen = true; o.el.style.zIndex = 99; o.el.animate([{ filter: 'drop-shadow(0 0 0 #fff)' }, { filter: 'drop-shadow(0 0 12px #FFE38A) drop-shadow(0 0 12px #FFE38A)' }, { filter: 'drop-shadow(0 0 0 #fff)' }], { duration: 900, iterations: 3 }); }
 function freeze() { if (Kit.coins() < 30) { Kit.toast('Necesitas 30 monedas'); return; } Kit.addCoins(-30); sc.querySelectorAll('.bs,.bs>span').forEach(e => e.style.animationPlayState = 'paused');
