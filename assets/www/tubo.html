@@ -92,7 +92,7 @@ function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const today=()=>{const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let mode='day',level=ls.get('tb-level',1),coins=ls.get('mj-coins',0),tubes,sel=null,hist,moves,extra,busy=false,els=[];
+let mode='day',level=ls.get('tb-level',1),coins=ls.get('mj-coins',0),tubes,sel=null,hist,moves,extra,busy=false,els=[],queue=[];
 
 // Reglas de verter: se vierte todo el bloque del mismo color de arriba, hasta llenar el tubo destino
 const topRun=t=>{if(!t.length)return 0;const c=t[t.length-1];let n=0;for(let i=t.length-1;i>=0&&t[i]===c;i--)n++;return n};
@@ -141,7 +141,7 @@ function themesUI(){document.body.className='t-'+theme+(window.self!==window.top
     theme=t.id;ls.set('tb-theme',theme);themesUI();build();$('tsh').classList.remove('show')})}
 
 function start(){const k=mode==='day'?6:Math.min(3+Math.floor(level/2),8),seed=mode==='day'?today():900+level*131;
-  tubes=generate(k,seed)||generate(k,seed+7);sel=null;hist=[];moves=0;extra=false;busy=false;
+  tubes=generate(k,seed)||generate(k,seed+7);sel=null;hist=[];moves=0;extra=false;busy=false;queue=[];
   $('lbl').textContent=mode==='day'?'Reto del '+new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'}):'Nivel '+level;build()}
 
 // La escena se construye una vez; luego solo se actualiza (así las transiciones son suaves)
@@ -155,7 +155,7 @@ function build(){const st=$('stage');st.innerHTML='';els=tubes.map((t,i)=>{const
 function hud(){$('mv').textContent=moves+(moves===1?' movimiento':' movimientos');$('coins').textContent=coins}
 function setSel(i){if(sel!==null&&els[sel])els[sel].classList.remove('sel');sel=i;if(i!==null)els[i].classList.add('sel')}
 
-function tap(i){if(busy)return;
+function tap(i){if(busy){queue.push(i);if(queue.length>2)queue.shift();return}
   if(sel===null){if(tubes[i].length&&!full(tubes[i])){setSel(i);tone(420,.05);Kit.buzz&&Kit.buzz(8)}return}
   if(sel===i){setSel(null);tone(330,.04);return}
   const a=sel,m=canPour(tubes[a],tubes[i]);
@@ -165,23 +165,25 @@ function tap(i){if(busy)return;
 
 async function pour(a,b,m){busy=true;const A=els[a],B=els[b],ta=tubes[a],tb=tubes[b],c=ta[ta.length-1],col=COLORS[c];
   hist.push(JSON.stringify(tubes));
-  const lifted=A.classList.contains('sel')?22:0,sR=A.getBoundingClientRect(),tR=B.getBoundingClientRect(),u=unit(b);
+  // posiciones de reposo (sin contar animaciones en curso), para que no falle aunque un tubo aún esté volviendo
+  const box=e=>{const l=e.offsetLeft,t=e.offsetTop,w=e.offsetWidth,h=e.offsetHeight;return{left:l,top:t,width:w,right:l+w,bottom:t+h}};
+  const sR=box(A),tR=box(B),u=unit(b);
   const dir=(tR.left+tR.width/2)>=(sR.left+sR.width/2)?1:-1;
-  const px=dir>0?sR.right:sR.left,py=sR.top+lifted,mx=tR.left+tR.width/2-dir*4,my=tR.top-34;
+  const px=dir>0?sR.right:sR.left,py=sR.top,mx=tR.left+tR.width/2-dir*4,my=tR.top-34;
   // 1) el tubo vuela y se inclina sobre el destino
   A.style.zIndex=10;A.style.transformOrigin=dir>0?'top right':'top left';A.classList.remove('sel');sel=null;
-  A.style.transition='transform .42s cubic-bezier(.45,0,.2,1)';
+  A.style.transition='transform .3s cubic-bezier(.45,0,.2,1)';
   A.style.transform=`translate(${mx-px}px,${my-py}px) rotate(${dir*74}deg)`;
-  await sleep(420);
+  await sleep(300);
   // 2) cae el chorro y el nivel sube poco a poco
-  const surf0=tR.bottom-3-tb.length*u,surf1=surf0-m*u,T=260*m+140;
-  const st=document.createElement('div');st.className='stream';st.style.cssText=`--c:${col};left:${mx}px;top:${my}px;height:0px;transition:height .14s ease-in`;document.body.appendChild(st);
+  const surf0=tR.bottom-3-tb.length*u,surf1=surf0-m*u,T=170*m+120;
+  const st=document.createElement('div');st.className='stream';st.style.cssText=`--c:${col};left:${mx}px;top:${my}px;height:0px;transition:height .1s ease-in`;document.body.appendChild(st);
   void st.offsetWidth;st.style.height=(surf0-my)+'px';
   const srcTop=A.querySelector('.lq.top');let dst=B.querySelector('.lq.top');
   if(!dst||+dst.dataset.c!==c){if(dst)dst.classList.remove('top');dst=document.createElement('div');dst.className='lq top';dst.dataset.c=c;
     dst.style.cssText=`--c:${col};height:0px;background:${liqBg(col)}`;B.querySelector('.liq').appendChild(dst)}
   dst.classList.add('wave');glug(m,tb.length);
-  await sleep(120);
+  await sleep(80);
   const h0=parseFloat(srcTop.style.height),d0=parseFloat(dst.style.height);
   const anim=(el,from,to)=>el.animate([{height:from+'px'},{height:to+'px'}],{duration:T,easing:'linear',fill:'forwards'});
   anim(srcTop,h0,h0-m*u);anim(dst,d0,d0+m*u);
@@ -189,17 +191,19 @@ async function pour(a,b,m){busy=true;const A=els[a],B=els[b],ta=tubes[a],tb=tube
   const drops=setInterval(()=>splash(mx,surf0-(surf0-surf1)*Math.random()*.2,col),90);
   await sleep(T);clearInterval(drops);
   // 3) se corta el chorro y el tubo vuelve a su sitio
-  st.animate([{top:my+'px',height:(surf1-my)+'px'},{top:surf1+'px',height:'0px'}],{duration:130,fill:'forwards'});
-  A.style.transition='transform .38s cubic-bezier(.3,1.25,.5,1)';A.style.transform='';
-  await sleep(140);st.remove();dst.classList.remove('wave');B.classList.remove('bump');void B.offsetWidth;B.classList.add('bump');
+  st.animate([{top:my+'px',height:(surf1-my)+'px'},{top:surf1+'px',height:'0px'}],{duration:110,fill:'forwards'});
+  A.style.transition='transform .32s cubic-bezier(.3,1.25,.5,1)';A.style.transform='';
+  await sleep(110);st.remove();dst.classList.remove('wave');B.classList.remove('bump');void B.offsetWidth;B.classList.add('bump');
   // 4) se aplica el movimiento
   for(let i=0;i<m;i++)tb.push(ta.pop());moves++;
   fill(a);fill(b);hud();
-  if(full(tb)){B.classList.add('done','cork');setTimeout(()=>B.classList.remove('cork'),500);const r=B.getBoundingClientRect();
+  if(full(tb)){B.classList.add('done','cork');setTimeout(()=>B.classList.remove('cork'),500);const r=box(B);
     try{Kit.burst(r.left+r.width/2,r.top+10,col);Kit.burst(r.left+r.width/2,r.top+40,'#FFE38A')}catch(e){}
     chime();Kit.buzz&&Kit.buzz([15,30,15])}
-  await sleep(260);A.style.zIndex='';A.style.transition='';busy=false;
-  if(won(tubes))setTimeout(win,350)}
+  // se puede seguir jugando mientras el tubo vuelve a su sitio
+  busy=false;setTimeout(()=>{A.style.zIndex='';A.style.transition=''},330);
+  if(won(tubes)){queue=[];setTimeout(win,450);return}
+  while(queue.length&&!busy)tap(queue.shift())}
 
 // Pequeñas gotas que salpican al caer
 function splash(x,y,col){const d=document.createElement('div');d.className='drop';d.style.cssText=`--c:${col};left:${x-3}px;top:${y-3}px`;document.body.appendChild(d);
@@ -222,7 +226,7 @@ let ac;const A_=()=>{try{ac=ac||new(window.AudioContext||window.webkitAudioConte
 function tone(f,d,type='sine',v=.1,at=0){const c=A_();if(!c)return;const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;
   g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.02)}
 // «Glu-glu»: burbujas que suben de tono a medida que se llena el tubo + rumor de agua
-function glug(m,lvl){const c=A_();if(!c)return;const T=(260*m+260)/1000,t0=c.currentTime;
+function glug(m,lvl){const c=A_();if(!c)return;const T=(170*m+200)/1000,t0=c.currentTime;
   const n=Math.round(T/.07);for(let i=0;i<n;i++){const t=t0+i*.07+Math.random()*.02,o=c.createOscillator(),g=c.createGain(),p=(lvl+m*i/n)/CAP;
     o.type='sine';const f=240+p*420+Math.random()*60;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.6,t+.05);
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.07,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.06);o.connect(g).connect(c.destination);o.start(t);o.stop(t+.07)}

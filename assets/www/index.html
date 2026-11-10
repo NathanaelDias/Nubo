@@ -260,12 +260,22 @@ nav button[data-s=prof].on span{background:linear-gradient(145deg,#FF8FA3,#E5484
 .drow .icon{width:50px;border-radius:15px;flex:none}.drow div{flex:1}.drow b{font-size:15px;font-weight:900}.drow small{display:block;color:var(--muted);font-weight:700;font-size:12px}
 .drow .go{background:var(--accent);color:#fff;border-radius:12px;padding:8px 12px;font-weight:900;font-size:13px}.drow.ok .go{background:var(--ok)}
 /* --- Juego abierto --- *//* --- Juego abierto --- */
-.player{position:fixed;inset:0;background:var(--bg);display:none;z-index:10;flex-direction:column}.player.show{display:flex}
+.player{position:fixed;inset:0;background:var(--bg);display:none;z-index:10;flex-direction:column}
+.player.show{display:flex;animation:pin .34s cubic-bezier(.2,.9,.3,1.08)}@keyframes pin{from{opacity:0;transform:scale(.93) translateY(18px)}}
+.player.closing{animation:pout .22s ease-in forwards;pointer-events:none}@keyframes pout{to{opacity:0;transform:scale(.95) translateY(14px)}}
+.pwrap{flex:1;position:relative;display:flex}
+body.playing>*:not(.player):not(script):not(.toast):not(.sheet):not(.k-ach):not(.k-toast):not(.k-fx):not(.k-ov){visibility:hidden}body.playing *{animation-play-state:paused}body.playing .player *{animation-play-state:running}
+.pload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2;transition:opacity .28s ease;color:#fff;font-family:var(--display);font-size:22px}
+.pload.hide{opacity:0;pointer-events:none}
+.pload .icon{width:120px;height:120px;border-radius:34px;display:grid;place-items:center;box-shadow:0 14px 30px rgba(0,0,0,.25),inset 0 4px 0 rgba(255,255,255,.3);animation:plb .9s ease-in-out infinite alternate}
+.pload .icon svg{width:78%}@keyframes plb{from{transform:translateY(0) scale(1)}to{transform:translateY(-10px) scale(1.04)}}
+.pload .dots{display:flex;gap:6px}.pload .dots i{width:8px;height:8px;border-radius:50%;background:#fff;opacity:.5;animation:pld .9s infinite}.pload .dots i:nth-child(2){animation-delay:.15s}.pload .dots i:nth-child(3){animation-delay:.3s}
+@keyframes pld{50%{opacity:1;transform:translateY(-4px)}}
 .pbar{flex:none;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 6px) 12px 6px;background:var(--fg);color:#fff}
 .pbar .back{background:rgba(255,255,255,.15);color:#fff;border-radius:999px;padding:7px 14px;font-weight:900;font-size:14px}
 .pbar b{font-family:var(--display);font-weight:400;font-size:18px;flex:1}
 .pbar .pill{background:rgba(255,255,255,.15);color:#fff;box-shadow:none}
-.player iframe{border:0;width:100%;flex:1}
+.player iframe{border:0;width:100%;flex:1;background:var(--bg)}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--fg);color:#fff;padding:10px 16px;border-radius:14px;font-weight:800;font-size:14px;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:86vw;text-align:center}
 .sheet{position:fixed;inset:0;background:rgba(29,35,64,.5);display:flex;align-items:flex-end;justify-content:center;z-index:15}
 .sheet>div{background:var(--card);border-radius:26px 26px 0 0;padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);width:min(100%,560px);display:flex;flex-direction:column;gap:12px;text-align:center}
@@ -367,7 +377,7 @@ nav button[data-s=prof].on span{background:linear-gradient(145deg,#FF8FA3,#E5484
   <button data-s="prof" aria-label="Perfil"><span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c.8-4.5 4.3-7 8.5-7s7.7 2.5 8.5 7z"/></svg></span></button>
 </nav>
 
-<div class="player" id="player"><div class="pbar"><button class="back" id="back">‹ Nubo</button><b id="pname"></b><button class="back" id="thBtn" aria-label="Temas">🎨</button><span class="pill"><i class="coin"></i><span class="coins">0</span></span></div><iframe id="frame" title="Juego"></iframe></div>
+<div class="player" id="player"><div class="pbar"><button class="back" id="back">‹ Nubo</button><b id="pname"></b><button class="back" id="thBtn" aria-label="Temas">🎨</button><span class="pill"><i class="coin"></i><span class="coins">0</span></span></div><div class="pwrap"><div class="pload" id="pload"></div><iframe id="frame" title="Juego"></iframe></div></div>
 
 <script src="kit.js"></script>
 <script>
@@ -588,9 +598,11 @@ function passSheet(){const S=season(),t=tierNow(),nx=TIERS.find(x=>x.n>t),s=docu
    <button class="main">Ver el pase completo</button><button class="sec">Cerrar</button></div>`;
   s.onclick=e=>{if(e.target.classList.contains('main')){s.remove();go('pass')}else if(e.target===s||e.target.classList.contains('sec'))s.remove()};document.body.appendChild(s);fillBars(s)}
 $('fabDaily').onclick=dailySheet;$('fabPass').onclick=passSheet;
-function open(g,f){lobbyStop();nuboEvent('game_start',{game:g.id});$('pname').textContent=g.name;$('frame').src=f;$('player').classList.add('show');$('fabs').classList.add('hide');sess={id:g.id,t:Date.now()};ls.set('mj-played-'+g.id,1)}
+function open(g,f){lobbyStop();nuboEvent('game_start',{game:g.id});$('pname').textContent=g.name;
+  const pl=$('pload');pl.style.background=g.bg;pl.innerHTML=`<div class="icon" style="background:${g.bg}">${ICON[g.id]||''}</div>${g.name}<div class="dots"><i></i><i></i><i></i></div>`;pl.classList.remove('hide');plT=Date.now();
+  $('player').classList.remove('closing');$('frame').src=f;$('player').classList.add('show');setTimeout(()=>{if($('player').classList.contains('show'))document.body.classList.add('playing')},360);$('fabs').classList.add('hide');sess={id:g.id,t:Date.now()};ls.set('mj-played-'+g.id,1)}
 $('thBtn').onclick=()=>{try{$('frame').contentWindow.postMessage({t:'themes'},'*')}catch(e){}};
-$('back').onclick=()=>{setTimeout(lobbyStart,400);if(sess){const u=ls.get('mj-usage',{}),x=u[sess.id]||{plays:0,mins:0,last:0};x.plays++;x.mins+=Math.max(.1,(Date.now()-sess.t)/60000);x.last=Date.now();u[sess.id]=x;ls.set('mj-usage',u);sess=null}$('player').classList.remove('show');$('fabs').classList.remove('hide');$('frame').src='about:blank';renderAll()};
+$('back').onclick=()=>{if($('player').classList.contains('closing'))return;document.body.classList.remove('playing');setTimeout(lobbyStart,400);if(sess){const u=ls.get('mj-usage',{}),x=u[sess.id]||{plays:0,mins:0,last:0};x.plays++;x.mins+=Math.max(.1,(Date.now()-sess.t)/60000);x.last=Date.now();u[sess.id]=x;ls.set('mj-usage',u);sess=null}$('fabs').classList.remove('hide');renderAll();const pp=$('player');pp.classList.add('closing');setTimeout(()=>{pp.classList.remove('show','closing');$('frame').src='about:blank'},220)};
 $('hAv').onclick=()=>go('prof');
 
 /* ===== TIENDA ===== */
@@ -753,7 +765,7 @@ function renderAdmin(){if(Date.now()>admUntil){go('prof');toast('Sesión de crea
 $('admX').onclick=()=>{admUntil=0;go('prof')};
 // acceso oculto: mantener pulsada la versión 3 segundos y después PIN
 let lp;$('verT').addEventListener('pointerdown',()=>{lp=setTimeout(()=>{Kit_vib();adminGate()},3000)});['pointerup','pointerleave'].forEach(ev=>$('verT').addEventListener(ev,()=>clearTimeout(lp)));
-function Kit_vib(){try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
+function Kit_vib(){try{Kit.haptic('heavy')}catch(e){}}
 
 setInterval(()=>{if(cur!=='home'||$('player').classList.contains('show'))return;const a=[...document.querySelectorAll('#grid .app:not(.lock):not(.rest)')];if(!a.length)return;const el=a[Math.floor(Math.random()*a.length)],sp=document.createElement('span');
   sp.className='spark';sp.textContent=['✨','⭐','💫'][Math.floor(Math.random()*3)];sp.style.left=(10+Math.random()*70)+'%';sp.style.top=(Math.random()*50)+'%';el.appendChild(sp);setTimeout(()=>sp.remove(),1300)},1400);
@@ -814,7 +826,7 @@ let cur='home';
 function go(s){cur=s;$('fabs').classList.toggle('hide',s!=='home');document.querySelectorAll('.screen').forEach(e=>e.classList.toggle('on',e.id==='s-'+s));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));scrollTo(0,0);renderAll()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.s));
 function renderAll(){renderHome();setTimeout(checkHubAch,600);if(cur==='shop')renderShop();if(cur==='prof')renderProfile();if(cur==='pass')renderPass();if(cur==='admin')renderAdmin()}
-$('frame').addEventListener('load',()=>{const g=$('pname').textContent;const id=GAMES.find(q=>q.name===g);if(id)ls.set('mj-played-'+id.id,1);
+let plT=0;$('frame').addEventListener('load',()=>{if($('frame').src.startsWith('about:'))return;setTimeout(()=>$('pload').classList.add('hide'),Math.max(0,450-(Date.now()-plT)));const g=$('pname').textContent;const id=GAMES.find(q=>q.name===g);if(id)ls.set('mj-played-'+id.id,1);
   const t=setInterval(()=>{if(!$('player').classList.contains('show')){clearInterval(t);return}document.querySelectorAll('.coins').forEach(e=>e.textContent=coins())},1000)});
 renderAll();
 })();

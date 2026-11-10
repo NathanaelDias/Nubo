@@ -10,6 +10,15 @@ const shuffle = (a, r) => { for (let i = a.length - 1; i > 0; i--) { const j = M
 const $ = (s, el = document) => el.querySelector(s);
 const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
 const emb = window.self !== window.top;
+/* Base táctil: sin retraso al tocar, sin selección de texto ni menú al mantener pulsado, sin rebote al deslizar */
+(function baseTouch() { const st = document.createElement('style');
+  st.textContent = `html{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+  input,textarea{-webkit-user-select:text;user-select:text}img,svg{-webkit-user-drag:none}
+  button,[role=button]{touch-action:manipulation}
+  .k-out{animation:kout .16s ease-in forwards!important}@keyframes kout{to{opacity:0}}
+  .k-out>*{animation:kout2 .16s ease-in forwards!important}@keyframes kout2{to{transform:scale(.92) translateY(8px);opacity:0}}`;
+  (document.head || document.documentElement).appendChild(st);
+  addEventListener('contextmenu', e => { if (!e.target.closest('input,textarea')) e.preventDefault(); }); })();
 
 const CSS = `
 :root{--bg:#EEF1FB;--fg:#1D2340;--muted:#626A8C;--line:#CBD2EC;--card:#fff;--accent:#3E5BD8;--gold:#F2A516;--ok:#2DB57A;--bad:#E5484D;
@@ -33,7 +42,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .k-modes{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
 .k-modes button{background:rgba(255,255,255,.22);color:#fff;border-radius:12px;padding:7px 11px;font-weight:900;font-size:13px}
 .k-modes button.on{background:#fff;color:var(--fg)}
-.k-map{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;margin-top:12px;border-radius:26px 26px 0 0}
+.k-map{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:12px;border-radius:26px 26px 0 0}
 .k-map .inner{position:relative;margin:0 auto}
 .k-map svg.path{position:absolute;inset:0;pointer-events:none}
 .k-node{position:absolute;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;display:grid;place-items:center;
@@ -57,7 +66,7 @@ button{transition:transform .12s}button:active{transform:scale(.94)}
 .k-node.cur::before{content:"";position:absolute;inset:-10px;border-radius:50%;border:4px solid rgba(255,255,255,.75);animation:kring 1.6s ease-out infinite}
 @keyframes kring{from{transform:scale(.8);opacity:1}to{transform:scale(1.35);opacity:0}}
 .k-node.done::after{content:"";position:absolute;inset:6px 10px auto auto;width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.7)}
-.k-pt{position:absolute;pointer-events:none;z-index:1;animation:kdrift linear infinite;opacity:.7}
+.k-pt{position:absolute;pointer-events:none;z-index:1;animation:kdrift linear infinite;opacity:.7;will-change:transform}
 @keyframes kdrift{from{transform:translate(0,0) rotate(0)}50%{transform:translate(var(--dx),-40px) rotate(180deg)}to{transform:translate(0,-80px) rotate(360deg);opacity:0}}
 .k-rip{position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:3px solid rgba(62,91,216,.55);pointer-events:none;z-index:40;animation:krip .45s ease-out forwards}
 @keyframes krip{to{transform:scale(4);opacity:0}}
@@ -136,12 +145,22 @@ let cssDone = false;
 function injectCSS(extra) { injectSafe(); if (cssDone) return; cssDone = true; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap'; document.head.appendChild(l);
   document.head.appendChild(h(`<style>${CSS}${extra || ''}</style>`)); }
 let ac;
-Kit.tone = (f, d = .08, type = 'sine', vol = .1) => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = f;
-  g.gain.setValueAtTime(vol, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {} };
-Kit.buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+const audio = () => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); if (ac.state === 'suspended') ac.resume(); return ac; } catch (e) { return null; } };
+addEventListener('pointerdown', audio, { capture: true, passive: true });
+const soundOn = () => ls.get('mj-prefs', {}).sound !== false;
+Kit.tone = (f, d = .08, type = 'sine', vol = .1) => { if (!soundOn()) return; const c = audio(); if (!c) return; try { const t = c.currentTime + .005, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0005, t + d); o.connect(g).connect(c.destination); o.start(t); o.stop(t + d + .03); } catch (e) {} };
+const bridge = () => { try { return window.flutter_inappwebview || (parent && parent.flutter_inappwebview) || null; } catch (e) { return null; } };
+Kit.haptic = (k = 'light') => { if (ls.get('mj-prefs', {}).vib === false) return; const b = bridge();
+  if (b && b.callHandler) { try { b.callHandler('vibrate', k); } catch (e) {} return; }
+  try { navigator.vibrate && navigator.vibrate({ select: 5, light: 10, medium: 20, heavy: 35 }[k] || 10); } catch (e) {} };
+Kit.buzz = p => Kit.haptic(Array.isArray(p) ? 'heavy' : p <= 10 ? 'select' : p <= 25 ? 'light' : 'medium');
+/* Toque de botón: vibración mínima, para que se note que ha respondido */
+addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('button,.k-node')) Kit.haptic('select'); }, { capture: true, passive: true });
 Kit.coins = () => ls.get('mj-coins', 0);
 Kit.addCoins = n => ls.set('mj-coins', Kit.coins() + n);
 Kit.addPP = n => ls.set('mj-pp', ls.get('mj-pp', 0) + n);
+Kit.close = (el, cb) => { if (!el || !el.isConnected) { cb && cb(); return; } el.classList.add('k-out'); setTimeout(() => { el.remove(); cb && cb(); }, 170); };
 Kit.toast = t => { const e = h(`<div class="k-toast">${t}</div>`); document.body.appendChild(e); setTimeout(() => e.remove(), 1800); };
 
 /* ---------- música de concentración: generada en el momento, en bucle ---------- */
@@ -186,7 +205,7 @@ Kit.tutorial = (id, name, steps, done) => {
       <button class="pri">${i < steps.length - 1 ? 'Siguiente' : '¡A jugar!'}</button>${i < steps.length - 1 ? '<button class="sec">Saltar</button>' : ''}`;
     card.querySelector('.pri').onclick = () => { Kit.tone(600 + i * 80, .06, 'triangle'); i++; if (i < steps.length) show(); else end(); };
     const sk = card.querySelector('.sec'); if (sk) sk.onclick = end; };
-  const end = () => { ls.set('k-' + id + '-tuto', 1); ov.remove(); done && done(); };
+  const end = () => { ls.set('k-' + id + '-tuto', 1); Kit.close(ov); done && done(); };
   show(); document.body.appendChild(ov);
 };
 
@@ -197,7 +216,7 @@ function nextAch() { if (achBusy || !ACHQ.length) return; injectSafe(); achBusy 
   const e = h(`<div class="k-ach"><div class="md">${a.icon}</div><div><small>${a.title}</small><b>${a.name}</b><span>${a.desc}</span></div>${a.reward ? `<div class="rw">+${a.reward} 🪙</div>` : ''}</div>`);
   document.body.appendChild(e); requestAnimationFrame(() => requestAnimationFrame(() => e.classList.add('in')));
   [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => Kit.tone(f, .18, 'triangle', .09), 120 + i * 110)); Kit.buzz([20, 40, 20]);
-  if (fx) for (let i = 0; i < 40; i++) parts.push({ x: innerWidth / 2 + (Math.random() - .5) * 200, y: 60, vx: (Math.random() - .5) * 8, vy: Math.random() * 4, g: .2, l: 60, c: ['#FFD23F', '#F2A516', '#fff'][i % 3], s: 5 });
+  if (fx) for (let i = 0; i < 40; i++) addP({ x: innerWidth / 2 + (Math.random() - .5) * 200, y: 60, vx: (Math.random() - .5) * 8, vy: Math.random() * 4, g: .2, l: 60, c: ['#FFD23F', '#F2A516', '#fff'][i % 3], s: 5 });
   setTimeout(() => { e.classList.remove('in'); setTimeout(() => { e.remove(); achBusy = false; nextAch(); }, 600); }, 3200); }
 Kit.ACH = [
   { id: 'w1', icon: '🎉', name: 'Primera victoria', desc: 'Supera tu primer nivel', t: d => Object.keys(d.stars).length >= 1 },
@@ -215,19 +234,25 @@ addEventListener('pointerdown', e => { if (!document.body) return; const r = doc
 
 /* confeti */
 let fx, cx, parts = [];
-function fxInit() { fx = h('<canvas class="k-fx"></canvas>'); document.body.appendChild(fx); cx = fx.getContext('2d');
+function fxInit() { if (fx) return; fx = h('<canvas class="k-fx"></canvas>'); document.body.appendChild(fx); cx = fx.getContext('2d');
   const sz = () => { fx.width = innerWidth * devicePixelRatio; fx.height = innerHeight * devicePixelRatio; cx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); }; sz(); addEventListener('resize', sz);
-  (function loop() { cx.clearRect(0, 0, innerWidth, innerHeight); parts = parts.filter(p => p.l-- > 0);
-    for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g; cx.globalAlpha = Math.min(1, p.l / 30); cx.fillStyle = p.c; cx.fillRect(p.x, p.y, p.s, p.s * 1.4); } cx.globalAlpha = 1; requestAnimationFrame(loop); })(); }
-Kit.confetti = () => { const cs = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7']; for (let i = 0; i < 130; i++) parts.push({ x: innerWidth / 2, y: innerHeight * .4, vx: (Math.random() - .5) * 15, vy: -Math.random() * 12 - 2, g: .3, l: 90 + Math.random() * 30, c: cs[i % 5], s: 5 + Math.random() * 3 });
+}
+let fxRun = false, fxLast = 0;
+function fxKick() { if (fxRun || !cx) return; fxRun = true; fxLast = performance.now(); requestAnimationFrame(fxLoop); }
+function fxLoop(now) { const k = Math.min(3, (now - fxLast) / 16.67); fxLast = now; cx.clearRect(0, 0, innerWidth, innerHeight); parts = parts.filter(p => (p.l -= k) > 0);
+  for (const p of parts) { p.x += p.vx * k; p.y += p.vy * k; p.vy += p.g * k; cx.globalAlpha = Math.min(1, p.l / 30); cx.fillStyle = p.c; cx.fillRect(p.x, p.y, p.s, p.s * 1.4); } cx.globalAlpha = 1;
+  if (parts.length) requestAnimationFrame(fxLoop); else fxRun = false; }
+const addP = p => { parts.push(p); fxKick(); };
+Kit.confetti = () => { const cs = ['#E5484D', '#3E7BFA', '#F5B82E', '#2DB57A', '#8E5CF7']; for (let i = 0; i < 130; i++) addP({ x: innerWidth / 2, y: innerHeight * .4, vx: (Math.random() - .5) * 15, vy: -Math.random() * 12 - 2, g: .3, l: 90 + Math.random() * 30, c: cs[i % 5], s: 5 + Math.random() * 3 });
   [660, 880, 1100].forEach((f, i) => setTimeout(() => Kit.tone(f, .14, 'triangle'), i * 110)); };
-Kit.burst = (x, y, c = '#F2A516') => { for (let i = 0; i < 14; i++) parts.push({ x, y, vx: (Math.random() - .5) * 7, vy: (Math.random() - .5) * 7, g: .1, l: 30, c, s: 5 }); };
+Kit.burst = (x, y, c = '#F2A516') => { if (!fx) fxInit(); for (let i = 0; i < 14; i++) addP({ x, y, vx: (Math.random() - .5) * 7, vy: (Math.random() - .5) * 7, g: .1, l: 30, c, s: 5 }); };
 
 Kit.dialog = ({ title, stars, text, reward, buttons }) => {
   const ov = h(`<div class="k-ov"><div class="k-card"><h2>${title}</h2>${stars != null ? `<div class="stars">${[0, 1, 2].map(i => i < stars ? `<span style="animation-delay:${.15 + i * .2}s">★</span>` : `<i>★</i>`).join('')}</div>` : ''}
     ${text ? `<p>${text}</p>` : ''}${reward ? `<div class="rw"><i class="k-coin"></i>+${reward}</div>` : ''}</div></div>`);
   const card = $('.k-card', ov);
-  buttons.forEach(b => { const e = h(`<button class="${b.pri ? 'pri' : 'sec'}">${b.t}</button>`); e.onclick = () => { ov.remove(); b.fn && b.fn(); }; card.appendChild(e); });
+  let used = false;
+  buttons.forEach(b => { const e = h(`<button class="${b.pri ? 'pri' : 'sec'}">${b.t}</button>`); e.onclick = () => { if (used) return; used = true; Kit.close(ov); b.fn && b.fn(); }; card.appendChild(e); });
   document.body.appendChild(ov); if (stars) for (let i = 0; i < stars; i++) setTimeout(() => Kit.tone(700 + i * 180, .15, 'triangle'), 150 + i * 200); return ov;
 };
 
@@ -264,10 +289,12 @@ function drawMap(el, { style, count, stars, cur, onPick }) {
     b.onclick = () => st === 'lock' ? Kit.toast('Supera el nivel ' + (cur) + ' para desbloquearlo') : onPick(n); inner.appendChild(b); });
   inner.insertAdjacentHTML('beforeend', `<div class="k-end" style="top:20px">Más niveles cada temporada ✨</div>`);
   const PT = { camino: ['🍃', '🦋', '🌸'], escalera: ['✨', '⭐', '💫'], islas: ['🫧', '🐟', '🫧'], torre: ['✨', '🌙', '⭐'], nubes: ['☁️', '✨', '🎈'] }[style] || ['✨'];
-  for (let i = 0; i < Math.min(40, count); i++) { const y = Math.random() * H, d = 6 + Math.random() * 8;
+  for (let i = 0; i < Math.min(16, count); i++) { const y = Math.random() * H, d = 6 + Math.random() * 8;
     inner.insertAdjacentHTML('beforeend', `<span class="k-pt" style="left:${Math.random() * W}px;top:${y}px;font-size:${12 + Math.random() * 12}px;--dx:${(Math.random() - .5) * 60}px;animation-duration:${d}s;animation-delay:-${Math.random() * d}s">${PT[i % PT.length]}</span>`); }
   inner.querySelectorAll('.k-node').forEach((b, i) => { const dist = Math.abs(i + 1 - cur); b.style.animationDelay = Math.min(dist * .04, .6) + 's'; });
-  requestAnimationFrame(() => { const p = P[Math.min(count, cur) - 1]; if (p) el.scrollTop = p.y - el.clientHeight * .6; });
+  inner.style.contain = 'layout paint';
+  requestAnimationFrame(() => { const p = P[Math.min(count, cur) - 1]; if (!p) return; const to = p.y - el.clientHeight * .6;
+    el.scrollTop = to + 220; requestAnimationFrame(() => { try { el.scrollTo({ top: to, behavior: 'smooth' }); } catch (e) { el.scrollTop = to; } }); });
 }
 
 /* ---------- juego ---------- */
@@ -325,11 +352,11 @@ Kit.game = (cfg) => {
     const owned = ls.get(K + '-owned', cfg.themes.filter(t => !t.cost && !t.pass).map(t => t.id));
     const sh = h(`<div class="k-sheet"><div><h3>Temas <button>✕</button></h3><p>Cambia el aspecto del juego. Los exclusivos se ganan con el pase de temporada.</p><div class="k-tg"></div></div></div>`);
     $('.k-tg', sh).innerHTML = cfg.themes.map(t => { const own = owned.includes(t.id); return `<button data-t="${t.id}" class="${t.id === theme ? 'on' : ''} ${own ? '' : 'lock'}"><div class="pv" style="background:${t.bg || '#EEF1FB'}">${t.pv}</div>${t.name}<small>${own ? (t.id === theme ? 'En uso' : 'Tuyo') : t.pass ? '★ Pase de temporada' : '🪙 ' + t.cost}</small></button>`; }).join('');
-    sh.onclick = e => { if (e.target === sh || e.target.textContent === '✕') sh.remove(); };
+    sh.onclick = e => { if (e.target === sh || e.target.textContent === '✕') Kit.close(sh); };
     sh.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const t = cfg.themes.find(x => x.id === b.dataset.t);
       if (!owned.includes(t.id)) { if (t.pass) { Kit.toast('Exclusivo del pase de temporada'); return; } if (Kit.coins() < t.cost) { Kit.toast(`Te faltan ${t.cost - Kit.coins()} monedas`); return; }
         Kit.addCoins(-t.cost); owned.push(t.id); ls.set(K + '-owned', owned); }
-      theme = t.id; ls.set(K + '-theme', theme); if (ctx) ctx.theme = theme; cfg.onTheme && cfg.onTheme(theme); sh.remove(); });
+      theme = t.id; ls.set(K + '-theme', theme); if (ctx) ctx.theme = theme; cfg.onTheme && cfg.onTheme(theme); Kit.close(sh); });
     document.body.appendChild(sh); }
   addEventListener('message', e => { if (e.data && e.data.t === 'themes') themes(); });
   Kit.theme = () => theme;

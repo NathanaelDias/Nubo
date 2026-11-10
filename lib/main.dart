@@ -91,10 +91,11 @@ class _NuboHomeState extends State<NuboHome> with WidgetsBindingObserver {
             supportZoom: false,
             builtInZoomControls: false,
             displayZoomControls: false,
-            useHybridComposition: true,
+            // Composición por textura: animaciones más fluidas en una WebView a pantalla completa.
+            useHybridComposition: false,
             domStorageEnabled: true,
             databaseEnabled: true,
-            transparentBackground: true,
+            transparentBackground: false,
             disableContextMenu: true,
             verticalScrollBarEnabled: false,
             horizontalScrollBarEnabled: false,
@@ -105,7 +106,24 @@ class _NuboHomeState extends State<NuboHome> with WidgetsBindingObserver {
             // Vibración nativa (más fiable que la del navegador).
             controller.addJavaScriptHandler(
                 handlerName: 'vibrate',
-                callback: (args) => HapticFeedback.mediumImpact());
+                callback: (args) {
+                  // Niveles: select (mínima), light, medium, heavy.
+                  final k = args.isNotEmpty ? '${args[0]}' : 'medium';
+                  switch (k) {
+                    case 'select':
+                      HapticFeedback.selectionClick();
+                      break;
+                    case 'light':
+                      HapticFeedback.lightImpact();
+                      break;
+                    case 'heavy':
+                      HapticFeedback.heavyImpact();
+                      break;
+                    default:
+                      HapticFeedback.mediumImpact();
+                  }
+                  return null;
+                });
             // Eventos de juego: aquí se enviarán a Firebase Analytics.
             controller.addJavaScriptHandler(
                 handlerName: 'event',
